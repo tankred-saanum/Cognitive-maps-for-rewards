@@ -528,7 +528,7 @@ comp.p <- 4
 ### Look at relative contribution of euclidean vs SR-GP/temporal models
 ###
 
-pred.srgp <- scale(sr_gp_weight[, successor.output$idx])  # get the best fitting temporal predictor
+pred.srgp <- scale(temporal[, successor.output$idx])  # get the best fitting temporal predictor
 pred.euc <- scale(euc[, euc.output$idx])  # get the best euclidean predictor
 trials_scaled <- c(trials_scaled)  # make trials_scaled a vector
 
