@@ -1,5 +1,7 @@
 # Cognitive-maps-for-rewards
 
+![](imgs/github-page.png)
+
 ## Description
 This repo contains code, figures and more amassed for the project "Cognitive maps for generalization".
 
