@@ -8,10 +8,6 @@ import scipy
 from scipy.optimize import minimize
 import pickle
 from importlib import reload
-import GraphGP
-reload(GraphGP)
-##
-from MentalMap import MentalMap
 from SuccessorRepresentation import SuccessorRepresentation
 from GraphGP import LaplacianGP
 import copy
@@ -26,13 +22,13 @@ done in this project
 
 
 def estimate_successor_model(SR, R, option_indices):
-    
+    ''' Estimates V with the successor representation'''
     V = SR @ R
     V_i = V[option_indices]
     return V_i[0] - V_i[1]
 
 def estimate_euclidean_model(K, R, training_idx, option_indices):
-    
+    ''' Computes difference in estimated value based on Euclidean (at least intended) kernel'''
     gp = LaplacianGP()
     gp.set_training_data(training_idx, R)
     gp.set_covariance(euclidean_covariance)
@@ -41,15 +37,10 @@ def estimate_euclidean_model(K, R, training_idx, option_indices):
     return options[0] - options[1]
 
 
-def estimate_subjective_euclidean_model(K, R, training_idx, option_indices):
-    gp = LaplacianGP()
-    gp.set_training_data(training_idx, R)
-    gp.set_covariance(K)
-    mu = gp.mean()
-    options = mu[option_indices]
-    return options[0] - options[1]
 
 def estimate_GP(K, R, training_idx, option_indices):
+    
+    ''' gives the estimated values of two options from a GP with a particular kernel'''
     gp = LaplacianGP()
     gp.set_training_data(training_idx, R)
     gp.set_covariance(K)
@@ -58,6 +49,7 @@ def estimate_GP(K, R, training_idx, option_indices):
     return [options[0], options[1]]
     
 def estimate_GP_full(K, R, training_idx):
+    '''Gives the full mean function of the GP after conditioning on R'''
     gp = LaplacianGP()
     gp.set_training_data(training_idx, R)
     gp.set_covariance(K)
@@ -65,6 +57,7 @@ def estimate_GP_full(K, R, training_idx):
     return mu
 
 def optimize_gp(X, training_idx, y, option_indices):
+    ''' optimizes the GPs lengthscale with scipy'''
     gp = LaplacianGP()
     gp.set_training_data(training_idx, y)
     X_train = X[training_idx]
@@ -77,6 +70,8 @@ def optimize_gp(X, training_idx, y, option_indices):
 
 
 def weigh_kernels(k1, k2, training_idx, y):
+    '''Computes weights as the bayesian posterior. This function isnt used in the project
+    but could still be an interesting model'''
     gp1 = LaplacianGP()
     gp1.set_training_data(training_idx, y)
     gp1.set_covariance(k1)
@@ -96,6 +91,7 @@ def weigh_kernels(k1, k2, training_idx, y):
     
 
 def estimate_transition_matrix(M, gamma, lmbd = 0.0000001):
+    '''This function estimates the transition matrix T from a particular successor matrix M'''
 
     I = np.eye(len(M))
     jitter = lmbd * np.eye(len(M))
@@ -104,6 +100,7 @@ def estimate_transition_matrix(M, gamma, lmbd = 0.0000001):
     return T
 
 def optimize_diffusion_gp(L, training_idx, y, option_indices):
+    '''Optimizes the lengthscale of the diffusion kernel with scipy'''
     gp = LaplacianGP()
     gp.set_training_data(training_idx, y)
     gp.set_laplacian_matrix(L)
@@ -158,6 +155,8 @@ def SR_bayesian(graph, prior_T, rewards):
 
 
 def make_symmetric(T):
+    '''This function makes the transition matrix symmetric by taking the pairwise maximimum of
+    the upper and lower triangular matrix of T'''
     T_upper = np.triu(T)
     T_lower = np.tril(T)
 
@@ -224,15 +223,6 @@ def construct_graph_from_T(T, subj_id):
 #        plt.show()
     
     
-def estimate_sr_graph_model(sr_graph, R, training_idx, option_indices, lengthscale):
-    
-    gp = LaplacianGP()
-    gp.train(sr_graph, training_idx, R, alpha=lengthscale)
-
-    mu = gp.mean()
-    options = mu[option_indices]
-    return options[0] - options[1]
-
 
 def estimate_graph_model(graph, R, training_idx, option_indices, lengthscale):
 
