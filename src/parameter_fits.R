@@ -53,7 +53,6 @@ sr <- as.data.frame(read.csv("C:\\Users\\Tankred\\Documents\\Emacs\\Notebooks\\P
 euc <- as.data.frame(read.csv("C:\\Users\\Tankred\\Documents\\Emacs\\Notebooks\\Papers to read\\rewards in mental maps\\param_fits\\euc_results.csv"))
 temporal <- as.data.frame(read.csv("C:\\Users\\Tankred\\Documents\\Emacs\\Notebooks\\Papers to read\\rewards in mental maps\\param_fits\\sr_gp_weighted_results3.csv"))
 
-## change to compositional without 3
 compositional <- as.data.frame(read.csv("C:\\Users\\Tankred\\Documents\\Emacs\\Notebooks\\Papers to read\\rewards in mental maps\\param_fits\\comp_results_v3.csv"))
 
 ################
