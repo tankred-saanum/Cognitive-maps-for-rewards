@@ -3,7 +3,9 @@ library(lmerTest)
 library(ggplot2)
 library(car)
 library(caret)
-
+library(latex2exp)
+library(varhandle)
+library(reshape2)
 
 #####################################################################################################################
 ###################### Parameter estimates and model comparison   ###################################################
@@ -512,6 +514,54 @@ param.grid.comp[comp.output$idx,]
 
 comp.p <- 4  # number of free parameters
 
+
+#####################################################################
+######################################################################
+#### Section 3.1
+#### Here we save the best fitting predictors in a seperate file and use them to
+#### do leave-one-out cross validation 
+
+
+
+LOO.CV <- function(dat, preds){
+  y <- dat$y
+  N <- length(y)
+  subj <- dat$subj
+  all.idx <- seq(N)
+  loss <- matrix(nrow=N, ncol=length(colnames(preds)))
+  
+  for (i in seq(1:N)){
+    train.idx <- all.idx[-i]
+    test.idx <- all.idx[i]
+    
+    for (j in 1:length(colnames(preds))){
+      name <- colnames(preds)[j]
+      train.data <- data.frame(y=y[train.idx], X = preds$name[train.idx], id = subj[train.idx])
+      test.data <- data.frame(y=y[test.idx], X = preds$name[test.idx], id = subj[test.idx])
+      mod <- glmer(y~ -1 + X + (-1 + X|id), family = "binomial", data=train.data)
+      
+      loo.prediction <- predict(mod, newdata=test.data, re.form =NA, type="response")
+      outcome <- y[test.idx]
+      loglikelihood <- log((loo.prediction * outcome)+((1-loo.prediction) * (1-outcom)))
+      loss[i, j] <- - loglikelihood
+      
+    }
+  }
+  loss <- as.data.frame(loss)
+  colnames(loss) <- colnames(preds)
+  loss
+}
+
+model.analysis <- data.frame(y=y, subj = subj)
+
+final.predictors <- data.frame(comp = compositional[, comp.output$idx], euc = euc[, euc.output$idx],
+                              temp = temporal[, successor.output$idx], mt = MT[, 1])
+
+
+losses <- LOO.CV(model.analysis, final.predictors)
+
+
+
 ######################################################################
 #####################################################################
 #### Section 4
@@ -908,13 +958,14 @@ neg.idx <- which(logistic.fits$inflection.point < 0)
 pos.idx <- which(logistic.fits$inflection.point > 0)
 
 inflection.df <- data.frame(R= m.rewards[pos.idx], inflection=logistic.fits$inflection.point[pos.idx])
-
+### plot inflection points
 ggplot(inflection.df, aes(x=inflection, y=R)) + geom_point() + geom_smooth(method="lm") + theme_bw() +
   xlab("Estimated inflection point (trials)") + ylab("Mean reward") +theme(axis.text=element_text(size=12),
                                                                              axis.title=element_text(size=14,face="bold"))
 
-
 cor.test(logistic.fits$inflection.point[pos.idx], m.rewards[pos.idx])
+
+
 
 ### get the top/bottom 15 subjects and look at differences in inflection points
 pos.idx
@@ -1104,6 +1155,7 @@ nlls <- c(euc.output$min.nll, successor.output$min.nll, comp.output$min.nll, MT_
 
 params <- c(3, 3, 4, 2)
 
+
 N <- 4800
 aics <- compute.aic(nlls, params)
 bics <- compute.bic(nlls, params, N)
@@ -1118,7 +1170,7 @@ sprintf("%.8f", aic.stats$diff)
 sprintf("%.8f", bic.stats$diff)
 
 names <- c("Spatial", "Temporal", "Spatio-temporal", "None")
-colors <- c("#e4a021", "#4ab4da", "#2f7c97", "#5d6264")
+colors <- c("#e4a021", "#4ab4da", "#2f9893", "#5d6264")
 comparison.df <- data.frame(aic.stats$weights, aic.stats$diff, bic.stats$weights, bic.stats$diff,  names, r2.stats)
 
 
@@ -1132,18 +1184,12 @@ p
 
 
 p<-ggplot(data=comparison.df, aes(x=names, y=aic.stats$diff)) +
-  geom_bar(stat="identity", fill=colors, width=0.5, position = position_dodge(width = 3))+
-  theme_minimal() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, face="bold")) + ggtitle("Cognitive map") + scale_x_discrete(limits = names) +
-  xlab("") + ylab("AIC difference") +theme(axis.text.x=element_text(size=15, angle=40, vjust = 1, hjust=0.8), axis.text.y=element_text(size=15), axis.title=element_text(size=14,face="bold"), plot.title = element_text(size = 18, face = "bold"))
+  geom_bar(stat="identity", fill=colors, width=0.65)+
+  theme_minimal() + theme(aspect.ratio = 1.2, axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))  + scale_x_discrete(limits = names) +
+  xlab("") + ylab("AIC difference") +theme(axis.text.x=element_text(size=20, angle=40, vjust = 1.18, hjust=1.1, colour = colors), axis.text.y=element_text(size=18), axis.title=element_text(size=18), 
+                                           plot.title = element_text(size = 18, face = "bold"))
 p
 
-
-# this one isnt ready yet
-p<-ggplot(data=comparison.df, aes(x=names, y=r2.stats)) +
-  geom_bar(stat="identity", fill="steelblue")+
-  theme_minimal() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + ggtitle("Pseudo R-squared") +
-  xlab("Models") + ylab("R2")+ ylim(0,.5)
-p
 
 
 ###############################################
@@ -1169,16 +1215,33 @@ logLik(ideal.mod.obs)
 rand.ll <- log(0.5)*length(observed.idx)
 ideal.r2 <- 1 - (logLik(ideal.mod.obs) / rand.ll)
 ideal.as.line <- c(ideal.r2,ideal.r2, ideal.r2, ideal.r2)
-line.df <- data.frame(ideal.as.line)
+
 
 comparison.df <- data.frame(aic.stats$weights, aic.stats$diff, bic.stats$weights, bic.stats$diff,  names, r2.stats, ideal.as.line)
-p<-ggplot(data=comparison.df, aes(x=names, y=r2.stats)) +
-  geom_bar(stat="identity", fill=colors)+
-  theme_minimal() + theme(axis.text.x=element_text(size=15, angle=40, vjust = 1, hjust=0.8), axis.text.y=element_text(size=15)) + ggtitle("Pseudo R-squared") +
-  xlab("Models") + ylab("R2")+ ylim(0,.5) + scale_x_discrete(limits = names) + geom_line(aes(x=ideal.as.line))
+comparison.df$names <- unfactor(comparison.df$names)
 
+
+
+# p<-ggplot(data=comparison.df) +
+#   geom_bar(aes(x=names, y=r2.stats), width=0.65, stat="identity", fill=colors)+
+#   geom_abline(aes(colour = "Ideal", intercept = as.numeric(ideal.r2), slope = 0), 
+#               linetype="dashed", size=1.5, colour = "#e65a77")+
+#   theme_minimal() +  ylab("R2")+theme(aspect.ratio = 1.2, axis.text.x=element_text(size=20, angle=40, vjust = 1.1, hjust=0.95, colour = colors),legend.text = element_text(size=15, face="bold"),
+#                                       axis.title = element_text(size=13, face="bold"), axis.text=element_text(size=15)) + ggtitle("") + xlab("") +
+#   ylim(0,.4)+ scale_x_discrete(limits = names) + scale_color_manual(name="", values = c( 'Ideal' = '#e65a77'))
+# p
+
+
+p<-ggplot(data=comparison.df) +
+  geom_bar(aes(x=names, y=r2.stats), width=0.65, stat="identity", fill=colors)+
+  geom_abline(aes(intercept = as.numeric(ideal.r2), slope = 0, colour = "Upper\n bound"), 
+              linetype="dashed", size=1.5)+
+  theme_minimal() +  ylab(TeX("McFadden's $R^2$"))+theme(aspect.ratio = 1.2, axis.text.x=element_text(size=20, angle=40, vjust = 1.1, hjust=0.95, colour = colors),legend.text = element_text(size=18),
+                                      axis.title = element_text(size=18), axis.text=element_text(size=15)) + ggtitle("") + xlab("") +
+  ylim(0,.4)+ scale_x_discrete(limits = names) + scale_color_manual(name="", values = c( 'Upper\n bound' = '#e65a77'))
 p
 
+#plot
 #######################
 
 ### check how well the other models do on this data set
@@ -1188,6 +1251,7 @@ comp.obs <- compositional[observed.idx, comp.output$idx]  # the compositional pr
 euc.obs <- euc[observed.idx, euc.output$idx]  # the same for euc
 sr.obs <- temporal[observed.idx, successor.output$idx]  # the same for temporal
 mt.obs <- mean_tracker[observed.idx,]  # for the mean tracker
+observed.ll <- log(0.5) * length(observed.idx)
 
 ### estimate models
 #compositional
@@ -1211,7 +1275,78 @@ mt.obs.mod.fixed <-  glm(y[observed.idx] ~ -1 + mt.obs , family="binomial")
 logLik(mt.obs.mod)
 
 
+comp.O.r2 <- r2(-logLik(comp.obs.mod), observed.ll)
+euc.O.r2 <- r2(-logLik(euc.obs.mod), observed.ll)
+temporal.O.r2 <- r2(-logLik(sr.obs.mod), observed.ll)
+mt.O.r2 <- r2(-logLik(mt.obs.mod), observed.ll)
 
+r2.observed <- c(euc.O.r2, temporal.O.r2, comp.O.r2, mt.O.r2 )
+
+############### 
+## now let's see how these models perform on trials where one of the monsters' values werent observed previously.
+
+unobserved.idx <- which(observed.both == 0)
+unobserved.ll <- log(0.5) * length(unobserved.idx)
+
+comp.obs <- compositional[unobserved.idx, comp.output$idx]  # the compositional predictor with best fitting parameters, at observed indices
+euc.obs <- euc[unobserved.idx, euc.output$idx]  # the same for euc
+sr.obs <- temporal[unobserved.idx, successor.output$idx]  # the same for temporal
+mt.obs <- mean_tracker[unobserved.idx,]  # for the mean tracker
+
+### estimate models
+#compositional
+comp.obs.mod <-  glmer(y[unobserved.idx] ~ -1 + comp.obs + (-1 + comp.obs|subj[unobserved.idx]), family="binomial")
+comp.obs.mod.fixed <-  glm(y[unobserved.idx] ~ -1 + comp.obs , family="binomial")
+logLik(comp.obs.mod)
+
+#euclidean
+euc.obs.mod <-  glmer(y[unobserved.idx] ~ -1 + euc.obs + (-1 + euc.obs|subj[unobserved.idx]), family="binomial")
+euc.obs.mod.fixed <-  glm(y[unobserved.idx] ~ -1 + euc.obs , family="binomial")
+logLik(euc.obs.mod)
+
+# temporal
+sr.obs.mod <-  glmer(y[unobserved.idx] ~ -1 + sr.obs + (-1 + sr.obs|subj[unobserved.idx]), family="binomial")
+sr.obs.mod.fixed <-  glm(y[unobserved.idx] ~ -1 + sr.obs , family="binomial")
+logLik(sr.obs.mod)
+
+# mean tracker
+mt.obs.mod <-  glmer(y[unobserved.idx] ~ -1 + mt.obs + (-1 + mt.obs|subj[unobserved.idx]), family="binomial")
+mt.obs.mod.fixed <-  glm(y[unobserved.idx] ~ -1 + mt.obs , family="binomial")
+logLik(mt.obs.mod)
+
+
+comp.UO.r2 <- r2(-logLik(comp.obs.mod), unobserved.ll)
+euc.UO.r2 <- r2(-logLik(euc.obs.mod), unobserved.ll)
+temporal.UO.r2 <- r2(-logLik(sr.obs.mod), unobserved.ll)
+mt.UO.r2 <- r2(-logLik(mt.obs.mod), unobserved.ll)
+
+r2.unobserved <- c(euc.UO.r2, temporal.UO.r2, comp.UO.r2, mt.UO.r2 )
+
+############ make some plots ############
+comparison.df <- data.frame(aic.stats$weights, aic.stats$diff, bic.stats$weights, bic.stats$diff,  names, r2.stats, ideal.as.line, r2U = r2.unobserved, r2O = r2.observed)
+comparison.df$names <- unfactor(comparison.df$names)
+
+## observed 
+p<-ggplot(data=comparison.df) +
+  geom_bar(aes(x=names, y=r2O), width=0.65, stat="identity", fill=colors)+
+  geom_abline(intercept = as.numeric(ideal.r2), slope = 0, 
+              linetype="dashed", size=1.5, colour = "#e65a77")+
+  theme_minimal() +  ylab("R2")+theme(aspect.ratio = 1.2, axis.text.x=element_text(size=20, angle=40, vjust = 1.1, hjust=0.95, colour = colors),legend.text = element_text(size=15, face="bold"),
+                                      axis.title = element_text(size=13, face="bold"), axis.text=element_text(size=15)) + ggtitle("") + xlab("") +
+  ylim(0,.4)+ scale_x_discrete(limits = names) #+ scale_color_manual(name="", values = c( 'Ideal' = '#e65a77'))
+p
+
+
+### unobserved
+
+p<-ggplot(data=comparison.df) +
+  geom_bar(aes(x=names, y=r2U), width=0.65, stat="identity", fill=colors)+
+  geom_abline(intercept = as.numeric(ideal.r2), slope = 0, 
+              linetype="dashed", size=1.5, colour = "#e65a77")+
+  theme_minimal() +  ylab("R2")+theme(aspect.ratio = 1.2, axis.text.x=element_text(size=20, angle=40, vjust = 1.1, hjust=0.95, colour = colors),legend.text = element_text(size=15, face="bold"),
+                                      axis.title = element_text(size=13, face="bold"), axis.text=element_text(size=15)) + ggtitle("") + xlab("") +
+  ylim(0,.4)+ scale_x_discrete(limits = names) #+ scale_color_manual(name="", values = c( 'Ideal' = '#e65a77'))
+p
 
 ##################################
 ##################################

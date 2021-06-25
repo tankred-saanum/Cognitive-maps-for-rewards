@@ -29,18 +29,10 @@ from Params import Params
 #################################################
 
 ### Open pickled files
-with open('occupancy_counts.pickle', 'rb') as handle:
-    occupancy_dict = pickle.load(handle)
 
 
 with open('transitions.pickle', 'rb') as handle:
     transition_dict = pickle.load(handle)
-
-with open('subjective_kernel.pickle', 'rb') as handle:
-    subjective_kernel_dict = pickle.load(handle)
-
-with open('subjective_grid_search_dict.pickle', 'rb') as handle:
-    subj_kernel_grid_dict = pickle.load(handle)
 
 
 with open('path_integration_kernels.pickle', 'rb') as handle:

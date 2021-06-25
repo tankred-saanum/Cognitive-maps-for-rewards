@@ -21,20 +21,10 @@ from Params import Params
 
 
 ### Open pickled files
-with open('occupancy_counts.pickle', 'rb') as handle:
-    occupancy_dict = pickle.load(handle)
 
 with open('transitions.pickle', 'rb') as handle:
     transition_dict = pickle.load(handle)
 
-with open('subjective_kernel.pickle', 'rb') as handle:
-    subjective_kernel_dict = pickle.load(handle)
-
-with open('subjective_grid_search_dict.pickle', 'rb') as handle:
-    subj_kernel_grid_dict = pickle.load(handle)
-
-# with open('estimated_euclidean_kernels.pickle', 'rb') as handle:
-#     estimated_euclidean_kernels = pickle.load(handle)
 
 with open('path_integration_kernels.pickle', 'rb') as handle:
     estimated_euclidean_kernels = pickle.load(handle)
@@ -399,7 +389,7 @@ for i in range(len(monster_loc)):
 #### set this variable to True to save simulation/graphs/control data
 save_simulation_data = False
 save_control = False
-save_sr_graphs = False  # set this to true to generate and save graphs induced from SR
+save_sr_graphs = True
 graph_save_format ="eps"
 
 
