@@ -399,7 +399,7 @@ for i in range(len(monster_loc)):
 #### set this variable to True to save simulation/graphs/control data
 save_simulation_data = False
 save_control = False
-save_sr_graphs = True
+save_sr_graphs = False  # set this to true to generate and save graphs induced from SR
 graph_save_format ="eps"
 
 
