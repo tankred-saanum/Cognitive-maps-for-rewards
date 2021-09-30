@@ -1,0 +1,3 @@
+14.09.2021 
+This one contains the matrices of the temporal map with learning rate = 0.01 (best fit compositional)
+and the ones of the euclidean map with lengthscale = 2.05 (best fit compositional)
