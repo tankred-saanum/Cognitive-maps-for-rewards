@@ -20,6 +20,7 @@ subj_start = 101
 subj_stop = 153
 
 subjects = list(range(subj_start, subj_stop))
+#runs = list(range(1, 5))
 
 state_occupancy_dict = {}
 occupancy_histograms = {}
