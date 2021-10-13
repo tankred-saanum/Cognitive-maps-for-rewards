@@ -3,8 +3,6 @@ subStart = 101;
 subStop = 152;
 
 exclude = [136, 137, 138, 121];
-% 131, 132, 133, 134, 135, -- 137, 138 (both excluded) -- , 140, 141
-
 
 
 for subj = subStart:subStop
