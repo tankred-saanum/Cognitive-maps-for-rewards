@@ -54,7 +54,7 @@ def RBF(X1, X2, var = 1, l = 1):
 
 
 
-def run_compositional_transition_counts_model(num_samples, file_name="comp_transition_counts_model.csv"):
+def run_compositional_transition_counts_model(num_samples, file_name="comp_transition_counts_model.csv", path_integration = True):
 
 
     progress_counter = 0
@@ -103,8 +103,12 @@ def run_compositional_transition_counts_model(num_samples, file_name="comp_trans
 
                 L = np.eye(num_monsters) - T
                 kernel_temp = scipy.linalg.expm(-lengthscale_temp*L)
-
-                loc = PI_dict[subj_id]
+                if path_integration:
+                    loc = PI_dict[subj_id]
+                else:
+                    mp = MonsterPrior()
+                    loc = mp.pos
+                #loc = PI_dict[subj_id]
                 kernel_space = RBF(loc, loc, l=lengthscale_euc)
                 kernel = (kernel_space + kernel_temp) / 2
                 ### add observations for this context

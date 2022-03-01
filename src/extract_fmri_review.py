@@ -27,7 +27,7 @@ with open('transitions.pickle', 'rb') as handle:
 with open('path_integration_kernels.pickle', 'rb') as handle:
     estimated_euclidean_kernels = pickle.load(handle)
 
-with open('path_integration_monster_locations.pickle', 'rb') as handle:
+with open('path_integration_monster_locations_no_noise.pickle', 'rb') as handle:
     PI_dict = pickle.load(handle)
 
 
@@ -247,6 +247,18 @@ def remove_outliers(array):
     idx = np.where(np.abs(array - np.mean(array)) < 2 * np.std(array))
     return idx
 
+def count_transitions(seq):
+    num_monsters = 12
+    T = np.zeros((num_monsters, num_monsters))
+    if len(seq) == 0:
+        return T
+    last_monster = seq[0]
+    for monster in seq[1:]:
+        T[last_monster, monster] += 1
+        last_monster = monster
+
+    return T
+
 
 def construct_graph_from_T(T):
     A = T.copy()
@@ -303,16 +315,16 @@ def RBF(X1, X2, var = 1, l = 1):
 
 #### Unpack data
 
-tbt_weights = pd.read_csv("tBt_euc_w.csv").values
+tbt_weights = pd.read_csv("tBt_euc_w_review.csv").values
 
 # the alternative effects
-effects_df = pd.read_csv("effects_and_weights.csv")
+effects_df = pd.read_csv("effects_and_weights_reviews.csv")
 m_rewards = np.array(effects_df["m.rewards"])
 
 final_weights_euclidean = np.array(effects_df["w.euc"])
 trial_weights = np.array(effects_df["trialw"])
 
-per_trial_df = pd.read_csv("per_trial_df.csv")
+per_trial_df = pd.read_csv("per_trial_df_review.csv")
 
 ## note that there's a typo in "moster_rewards"
 monster_rewards = pd.read_csv("moster_rewards.csv")
@@ -321,9 +333,6 @@ MR_1 = np.array(monster_rewards["ctx1"])
 MR_2 = np.array(monster_rewards["ctx2"])
 
 reward_dict = {1: MR_1, 2: MR_2}
-
-sr_diffusion = 1
-
 
 
 ### create matrices with predictions and RPEs
@@ -357,7 +366,7 @@ subj_counter = -1
 
 ### this variable controls whether the data used for fmri analysis should be saved
 save_data = True
-creation_data = '1.2.2022'
+creation_date = '1.2.2022'
 ###########
 
 
@@ -419,9 +428,9 @@ marginal_sr = np.zeros(4800)
 ### an array containing a 1 for the trials where subjects have already seen the values of both monsters:
 true_diff = np.zeros(4800)
 observed_both = np.zeros(4800)
-chosen_monster_visits = np.zeros(4800)
-unchosen_monster_visits = np.zeros(4800)
-
+# chosen_monster_visits = np.zeros(4800)
+# unchosen_monster_visits = np.zeros(4800)
+#
 
 ### Start loop
 
@@ -447,7 +456,7 @@ for i, subj_id in enumerate(subj):
         context_dict[2] = {"training_idx": [], "rewards": [], "state_rewards" : np.zeros(len(np.arange(12)))}
 
         ### SR
-
+        num_monsters = 12
         T = np.zeros((num_monsters, num_monsters))
         for k, (run, seq) in enumerate(transition_dict[subj_id].items()):
 
@@ -484,20 +493,17 @@ for i, subj_id in enumerate(subj):
         if save_data:
             Path(f"fmri{creation_date}/matrices/{subj_id}").mkdir(parents=True, exist_ok=True)
 
-            SR_df = pd.DataFrame(SR1)
+            SR_df = pd.DataFrame(T)
             SR_df.to_csv(f"fmri{creation_date}/matrices/{subj_id}/SR_matrix.csv", index=False, header=False)
 
 #             SR_kernel_df = pd.DataFrame(SR_kernel) ## save the temporal kernel used in the compositional model
 #             SR_kernel_df.to_csv(f"fmri/matrices/{subj_id}/SR_kernel_matrix.csv", index=False, header=False)
 
-            SR_kernel_df = pd.DataFrame(SR_kernel_comp) ## save the temporal kernel used in the compositional model
+            SR_kernel_df = pd.DataFrame(kernel_temp) ## save the temporal kernel used in the compositional model
             SR_kernel_df.to_csv(f"fmri{creation_date}/matrices/{subj_id}/SR_kernel_matrix.csv", index=False, header=False)
 
-            euclidean_kernel_df = pd.DataFrame(estimated_euclidean_kernel_comp)
+            euclidean_kernel_df = pd.DataFrame(spatial_kernel)
             euclidean_kernel_df.to_csv(f"fmri{creation_date}/matrices/{subj_id}/euclidean_kernel_matrix.csv", index=False, header=False)
-
-            rich_euclidean_df = pd.DataFrame(estimated_euclidean_kernel_rich)
-            rich_euclidean_df.to_csv(f"fmri{creation_date}/matrices/{subj_id}/rich_euclidean_kernel_matrix.csv", index=False, header=False)
 
             weighted_comp_kernel_df = pd.DataFrame(comp_kernel)
             weighted_comp_kernel_df.to_csv(f"fmri{creation_date}/matrices/{subj_id}/weighted_comp_kernel_matrix.csv", index=False, header=False)
@@ -512,8 +518,8 @@ for i, subj_id in enumerate(subj):
         decision = decisions[i]
         unchosen = 1 - decision
 
-        chosen_monster_visits[i] = SR1[options[decision], options[decision]]
-        unchosen_monster_visits[i] = SR1[options[unchosen], options[unchosen]]
+        # chosen_monster_visits[i] = SR1[options[decision], options[decision]]
+        # unchosen_monster_visits[i] = SR1[options[unchosen], options[unchosen]]
 
         true_diff_i = reward_dict[current_context][op1[i]] - reward_dict[current_context][op2[i]]
         true_diff[i] = true_diff_i
@@ -558,8 +564,8 @@ for i, subj_id in enumerate(subj):
         decision = decisions[i]
         unchosen = 1 - decision
 
-        chosen_monster_visits[i] = SR1[options[decision], options[decision]]
-        unchosen_monster_visits[i] = SR1[options[unchosen], options[unchosen]]
+        # chosen_monster_visits[i] = SR1[options[decision], options[decision]]
+        # unchosen_monster_visits[i] = SR1[options[unchosen], options[unchosen]]
 
 
         true_diff_i = reward_dict[current_context][op1[i]] - reward_dict[current_context][op2[i]]
@@ -606,9 +612,9 @@ for i, subj_id in enumerate(subj):
         true_diff_i = reward_dict[current_context][op1[i]] - reward_dict[current_context][op2[i]]
         true_diff[i] = true_diff_i
 
-        chosen_monster_visits[i] = SR1[options[decision], options[decision]]
-        unchosen_monster_visits[i] = SR1[options[unchosen], options[unchosen]]
-
+        # chosen_monster_visits[i] = SR1[options[decision], options[decision]]
+        # unchosen_monster_visits[i] = SR1[options[unchosen], options[unchosen]]
+        #
 
 
 
@@ -713,10 +719,10 @@ if save_control:
     true_diff_df.to_csv("param_fits/true_diff.csv", index=False)
     observed_both_df = pd.DataFrame(observed_both)
     observed_both_df.to_csv("param_fits/observed_both.csv", index=False)
-    chosen_visits = pd.DataFrame(chosen_monster_visits)
-    chosen_visits.to_csv("param_fits/chosen_visits.csv", index=False)
-    unchosen_visits = pd.DataFrame(unchosen_monster_visits)
-    unchosen_visits.to_csv("param_fits/unchosen_visits.csv", index=False)
+    # chosen_visits = pd.DataFrame(chosen_monster_visits)
+    # chosen_visits.to_csv("param_fits/chosen_visits.csv", index=False)
+    # unchosen_visits = pd.DataFrame(unchosen_monster_visits)
+    # unchosen_visits.to_csv("param_fits/unchosen_visits.csv", index=False)
 
 
 
@@ -919,10 +925,6 @@ if save_data:
     save_csv(euc_GP_preds_chosen, subjects, f"fmri{creation_date}/predictions/RBF_preds_chosen.csv")
     save_csv(euc_GP_preds_unchosen, subjects, f"fmri{creation_date}/predictions/RBF_preds_unchosen.csv")
     save_csv(euc_GP_RPE, subjects, f"fmri{creation_date}/predictions/RBF_RPE.csv")
-
-    save_csv(rich_euc_GP_preds_chosen, subjects, f"fmri{creation_date}/predictions/rich_RBF_preds_chosen.csv")
-    save_csv(rich_euc_GP_preds_unchosen, subjects, f"fmri{creation_date}/predictions/rich_RBF_preds_unchosen.csv")
-    save_csv(rich_euc_GP_RPE, subjects, f"fmri{creation_date}/predictions/rich_RBF_RPE.csv")
 
 
     save_csv(comp_preds_chosen, subjects, f"fmri{creation_date}/predictions/comp_preds_chosen.csv")

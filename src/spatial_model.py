@@ -30,7 +30,7 @@ def RBF(X1, X2, var = 1, l = 1):
 
 
 
-def run_spatial_model(num_samples, file_name="spatial_model.csv"):
+def run_spatial_model(num_samples, file_name="spatial_model.csv", path_integration = True):
 
 
     progress_counter = 0
@@ -60,7 +60,14 @@ def run_spatial_model(num_samples, file_name="spatial_model.csv"):
                 context_dict[2] = {"training_idx": [], "rewards": [], "state_rewards" : np.zeros(len(np.arange(12)))}
 
 
-                loc = PI_dict[subj_id]
+                #loc = PI_dict[subj_id]
+
+                if path_integration:
+                    loc = PI_dict[subj_id]
+                else:
+                    mp = MonsterPrior()
+                    loc = mp.pos
+                #loc = mp.pos
                 kernel = RBF(loc, loc, l=lengthscale)
                 ### add observations for this context
                 options = [op1[i], op2[i]]
@@ -125,7 +132,7 @@ def run_spatial_model(num_samples, file_name="spatial_model.csv"):
 
 
 
-
+mp = MonsterPrior()
 # with open('transitions.pickle', 'rb') as handle:
 #     transition_dict = pickle.load(handle)
 
@@ -153,4 +160,6 @@ rewards = np.array(df["chosen_value"])
 
 states = np.arange(0, 12)
 
-run_spatial_model(num_samples=100, file_name="spatial_model.csv")
+run_spatial_model(num_samples=100, file_name="spatial_model_true_loc.csv", path_integration = False)
+
+run_spatial_model(num_samples=100, file_name="spatial_model_pi.csv", path_integration = True)
