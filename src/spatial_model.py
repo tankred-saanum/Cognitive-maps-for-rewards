@@ -136,7 +136,7 @@ mp = MonsterPrior()
 # with open('transitions.pickle', 'rb') as handle:
 #     transition_dict = pickle.load(handle)
 
-with open('path_integration_monster_locations_no_noise.pickle', 'rb') as handle:
+with open('path_integration_monster_locations_no_noise_true_scale.pickle', 'rb') as handle:
     PI_dict = pickle.load(handle)
 
 
@@ -162,4 +162,4 @@ states = np.arange(0, 12)
 
 run_spatial_model(num_samples=100, file_name="spatial_model_true_loc.csv", path_integration = False)
 
-run_spatial_model(num_samples=100, file_name="spatial_model_pi.csv", path_integration = True)
+run_spatial_model(num_samples=100, file_name="spatial_model_pi_true_scale.csv", path_integration = True)

@@ -114,7 +114,10 @@ def estimate_euclidean_model(K, R, training_idx, option_indices):
     options = mu[option_indices]
     return options[0] - options[1]
 
-with open('avg_temporal_distances.pickle', 'rb') as handle:
+# with open('avg_temporal_distances.pickle', 'rb') as handle:
+#     distances = pickle.load(handle)
+
+with open('min_temporal_distances.pickle', 'rb') as handle:
     distances = pickle.load(handle)
 
 
@@ -138,4 +141,5 @@ rewards = np.array(df["chosen_value"])
 
 states = np.arange(0, 12)
 
-temp_dist_model(distance_matrices=distances, num_samples=100, file_name="temporal_dists_model.csv")
+#temp_dist_model(distance_matrices=distances, num_samples=100, file_name="avg_temporal_dists_model.csv")
+temp_dist_model(distance_matrices=distances, num_samples=100, file_name="min_temporal_dists_model.csv")
