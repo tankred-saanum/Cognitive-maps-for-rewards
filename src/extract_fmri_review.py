@@ -27,10 +27,11 @@ with open('transitions.pickle', 'rb') as handle:
 with open('path_integration_kernels.pickle', 'rb') as handle:
     estimated_euclidean_kernels = pickle.load(handle)
 
-with open('path_integration_monster_locations_no_noise.pickle', 'rb') as handle:
+# with open('path_integration_monster_locations_no_noise.pickle', 'rb') as handle:
+#     PI_dict = pickle.load(handle)
+
+with open('path_integration_monster_locations_no_noise_true_scale.pickle', 'rb') as handle:
     PI_dict = pickle.load(handle)
-
-
 ### Unpack and process these things into a dictionary which we we'll during the analysis
 
 
@@ -366,7 +367,7 @@ subj_counter = -1
 
 ### this variable controls whether the data used for fmri analysis should be saved
 save_data = True
-creation_date = '1.2.2022'
+creation_date = '31.3.2022-highLengthscale'
 ###########
 
 
@@ -443,19 +444,47 @@ for i, subj_id in enumerate(subj):
         ### set hyperparameters
 
 
-        loc = mp.pos
+        loc = PI_dict[subj_id]
+        learning_rate = 0.001
 
-        lengthscale_temp = 1.4
-        lengthscale_temp_comp = 2.95
-        lengthscale_spatial = 1.2424
-        lengthscale_spatial_comp = 1.126
+        ### OPTIMAL SETTINGS FOR BEHAVIORAL MODELLING
+        lengthscale_temp = 3.384
+        lengthscale_spatial = 1.742
 
+        ### LOW SETTINGS
+        # lengthscale_temp = 0.1
+        # lengthscale_spatial = 0.1
+
+        ### MEDIUM SETTINGS
+
+        # lengthscale_temp = 1
+        # lengthscale_spatial = 1
+
+        ### HIGH SETTINGS
+
+        # lengthscale_temp = 3.5
+        # lengthscale_spatial = 3.5
 
         context_dict = {}
         context_dict[1] ={"training_idx": [], "rewards": [], "state_rewards" : np.zeros(len(np.arange(12)))}
         context_dict[2] = {"training_idx": [], "rewards": [], "state_rewards" : np.zeros(len(np.arange(12)))}
 
         ### SR
+
+        seq_list = []
+        for run, seq in transition_dict[subj_id].items():
+            seq_ = copy.deepcopy(seq)
+            seq_ -=1
+            seq_list.append(seq_)
+
+
+        sr_model = SuccessorRepresentation(states, seq_list, alpha=learning_rate)
+        SR = sr_model.get_SR()
+
+        SRL = estimate_laplacian(SR, gamma = sr_model.gamma)
+        kernel_temp_sr = scipy.linalg.expm(-lengthscale_temp*SRL)
+
+        ### Transition matrix
         num_monsters = 12
         T = np.zeros((num_monsters, num_monsters))
         for k, (run, seq) in enumerate(transition_dict[subj_id].items()):
@@ -473,40 +502,40 @@ for i, subj_id in enumerate(subj):
         T = make_symmetric(T)
 
         L = np.eye(num_monsters) - T
-        kernel_temp = scipy.linalg.expm(-lengthscale_temp*L)
+        kernel_temp_transition = scipy.linalg.expm(-lengthscale_temp*L)
 
         #### now for the compositional kernel
 
-        kernel_temp_comp = scipy.linalg.expm(-lengthscale_temp_comp*L)
+        #kernel_temp_comp = scipy.linalg.expm(-lengthscale_temp_comp*L)
 
 
         ### Euclidean
 
         spatial_kernel = RBF(loc, loc, l=lengthscale_spatial)
-        spatial_kernel_comp = RBF(loc, loc, l=lengthscale_spatial_comp)
+        #spatial_kernel_comp = RBF(loc, loc, l=lengthscale_spatial_comp)
 
 
 
         ##### weighted
-        comp_kernel = (spatial_kernel + kernel_temp_comp)/2
+        comp_kernel = (spatial_kernel + kernel_temp_sr)/2
 
         if save_data:
             Path(f"fmri{creation_date}/matrices/{subj_id}").mkdir(parents=True, exist_ok=True)
 
-            SR_df = pd.DataFrame(T)
-            SR_df.to_csv(f"fmri{creation_date}/matrices/{subj_id}/SR_matrix.csv", index=False, header=False)
+            # SR_df = pd.DataFrame(T)
+            # SR_df.to_csv(f"fmri{creation_date}/matrices/{subj_id}/SR_matrix.csv", index=False, header=False)
 
 #             SR_kernel_df = pd.DataFrame(SR_kernel) ## save the temporal kernel used in the compositional model
 #             SR_kernel_df.to_csv(f"fmri/matrices/{subj_id}/SR_kernel_matrix.csv", index=False, header=False)
 
-            SR_kernel_df = pd.DataFrame(kernel_temp) ## save the temporal kernel used in the compositional model
+            SR_kernel_df = pd.DataFrame(kernel_temp_sr) ## save the temporal kernel used in the compositional model
             SR_kernel_df.to_csv(f"fmri{creation_date}/matrices/{subj_id}/SR_kernel_matrix.csv", index=False, header=False)
 
             euclidean_kernel_df = pd.DataFrame(spatial_kernel)
             euclidean_kernel_df.to_csv(f"fmri{creation_date}/matrices/{subj_id}/euclidean_kernel_matrix.csv", index=False, header=False)
 
-            weighted_comp_kernel_df = pd.DataFrame(comp_kernel)
-            weighted_comp_kernel_df.to_csv(f"fmri{creation_date}/matrices/{subj_id}/weighted_comp_kernel_matrix.csv", index=False, header=False)
+            comp_kernel_df = pd.DataFrame(comp_kernel)
+            comp_kernel_df.to_csv(f"fmri{creation_date}/matrices/{subj_id}/comp_kernel_matrix.csv", index=False, header=False)
 
 
 
@@ -635,7 +664,7 @@ for i, subj_id in enumerate(subj):
         reward_normalized = y_prime[-1]
 
 
-        SR_GP_preds = estimate_GP(kernel_temp, y, training_idx, option_indices=options)
+        SR_GP_preds = estimate_GP(kernel_temp_sr, y, training_idx, option_indices=options)
         euclidean_preds = estimate_GP(spatial_kernel, y, training_idx, option_indices=options)
         comp_preds = estimate_GP(comp_kernel, y, training_idx, option_indices=options)
 
@@ -648,8 +677,8 @@ for i, subj_id in enumerate(subj):
         mean_tracker[i] = MT_diff
 
         ## estimate log likelihood for SR and Euclidean
-        p_euc, p_sr = weigh_kernels(spatial_kernel, kernel_temp, np.append(training_idx, [choice]), y_prime)
-        ml_euc, ml_sr = get_ml(spatial_kernel, kernel_temp, np.append(training_idx, [choice]), y_prime)
+        p_euc, p_sr = weigh_kernels(spatial_kernel, kernel_temp_sr, np.append(training_idx, [choice]), y_prime)
+        ml_euc, ml_sr = get_ml(spatial_kernel, kernel_temp_sr, np.append(training_idx, [choice]), y_prime)
         comp_w[i] = p_euc
         marginal_euc[i] = ml_euc
         marginal_sr[i] = ml_sr
@@ -678,7 +707,7 @@ for i, subj_id in enumerate(subj):
 
             full_comp_preds = estimate_GP_full(comp_kernel, y, training_idx)
             full_euc_preds = estimate_GP_full(spatial_kernel, y, training_idx)
-            full_sr_preds = estimate_GP_full(kernel_temp, y, training_idx)
+            full_sr_preds = estimate_GP_full(kernel_temp_sr, y, training_idx)
             full_MT_preds = estimate_GP_full(MT_kernel, y, training_idx)
 
             if current_context == 1:

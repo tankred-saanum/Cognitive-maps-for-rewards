@@ -82,10 +82,16 @@ def RBF(X1, X2, var = 1, l = 1):
 
     sqdist = np.sum(X1**2, 1).reshape(-1, 1) + np.sum(X2**2, 1) - 2 * np.dot(X1, X2.T)
     return var**2 * np.exp(-0.5 / l**2 * sqdist)
+    ## start loop
+lengthscales = np.linspace(0.1, 4, 20)
+learning_rates = np.linspace(0.001, 0.5, 20)
+
+l_x, l_y = np.meshgrid(lengthscales, learning_rates)
+hparams = np.array([l_x.ravel(), l_y.ravel()]).T
+hparams[10]
 
 
-
-def run_compositional_sr_model(num_samples, file_name="comp_sr_model.csv", path_integration = True):
+def run_compositional_sr_model(num_samples, file_name="comp_sr_model.csv", path_integration = True, optimize_lr = False):
 
 
     progress_counter = 0
@@ -96,14 +102,21 @@ def run_compositional_sr_model(num_samples, file_name="comp_sr_model.csv", path_
 
     ## start loop
     lengthscales = np.linspace(0.1, 4, num_samples)
-    l_x, l_y = np.meshgrid(lengthscales, lengthscales)
-    lengthscales = np.array([l_x.ravel(), l_y.ravel()]).T
-    header = np.arange(len(lengthscales))
-    for n in range(len(lengthscales)):
-        lengthscale_euc, lengthscale_temp = lengthscales[n, 0], lengthscales[n, 1]
+    learning_rates = np.linspace(0.001, 0.5, num_samples)
+
+    if not optimize_lr:
+        l_x, l_y = np.meshgrid(lengthscales, lengthscales)
+        hparams = np.array([l_x.ravel(), l_y.ravel()]).T
+    else:
+        l_x, l_y = np.meshgrid(lengthscales, learning_rates)
+        hparams = np.array([l_x.ravel(), l_y.ravel()]).T
+    header = np.arange(len(hparams))
+    for n in range(len(hparams)):
+
+        hparam_euc, hparam_temp = hparams[n, 0], hparams[n, 1]
         #lengthscale = 1
         last_subj = -1
-        print("Progress: ", progress_counter / len(lengthscales), end = "\r")
+        print("Progress: ", progress_counter / len(hparams), end = "\r")
         progress_counter += 1
         for i, subj_id in enumerate(subj):
 
@@ -125,18 +138,26 @@ def run_compositional_sr_model(num_samples, file_name="comp_sr_model.csv", path_
                     seq_list.append(seq_)
 
 
-                sr_model = SuccessorRepresentation(states, seq_list, alpha=0.3)
-                SR = sr_model.get_SR()
 
-                SRL = estimate_laplacian(SR, gamma = sr_model.gamma)
-                kernel_temp = scipy.linalg.expm(-lengthscale_temp*SRL)
+                if not optimize_lr:
+                    sr_model = SuccessorRepresentation(states, seq_list, alpha=0.001)
+                    SR = sr_model.get_SR()
+
+                    SRL = estimate_laplacian(SR, gamma = sr_model.gamma)
+                    kernel_temp = scipy.linalg.expm(-hparam_temp*SRL)
+                else:
+                    sr_model = SuccessorRepresentation(states, seq_list, alpha=hparam_temp)
+                    SR = sr_model.get_SR()
+
+                    SRL = estimate_laplacian(SR, gamma = sr_model.gamma)
+                    kernel_temp = scipy.linalg.expm(-1*SRL)
 
                 if path_integration:
                     loc = PI_dict[subj_id]
                 else:
                     mp = MonsterPrior()
                     loc = mp.pos
-                kernel_space = RBF(loc, loc, l=lengthscale_euc)
+                kernel_space = RBF(loc, loc, l=hparam_euc)
                 kernel = (kernel_space + kernel_temp) / 2
                 ### add observations for this context
                 options = [op1[i], op2[i]]
@@ -205,9 +226,11 @@ def run_compositional_sr_model(num_samples, file_name="comp_sr_model.csv", path_
 with open('transitions.pickle', 'rb') as handle:
     transition_dict = pickle.load(handle)
 
-with open('path_integration_monster_locations_no_noise.pickle', 'rb') as handle:
-    PI_dict = pickle.load(handle)
+# with open('path_integration_monster_locations_no_noise.pickle', 'rb') as handle:
+#     PI_dict = pickle.load(handle)
 
+with open('path_integration_monster_locations_no_noise_true_scale.pickle', 'rb') as handle:
+    PI_dict = pickle.load(handle)
 
 df = pd.read_csv('choice_data.csv')
 
@@ -228,6 +251,10 @@ decisions -= 1
 rewards = np.array(df["chosen_value"])
 
 states = np.arange(0, 12)
+#
+# run_compositional_sr_model(num_samples=20, file_name="comp_sr_model_pi_lowlr.csv", path_integration = True)
+# run_compositional_sr_model(num_samples=20, file_name="comp_sr_model_true_loc_lowlr.csv", path_integration = False)
+#run_compositional_sr_model(num_samples=20, file_name="comp_sr_model_pi_true_scale_lowlr.csv", path_integration = True)
+#run_compositional_sr_model(num_samples=20, file_name="comp_sr_model_pi_true_scale_constantlambda.csv", path_integration = True, optimize_lr=True)
 
-run_compositional_sr_model(num_samples=20, file_name="comp_sr_model_pi.csv", path_integration = True)
-run_compositional_sr_model(num_samples=20, file_name="comp_sr_model_true_loc.csv", path_integration = False)
+run_compositional_sr_model(num_samples=20, file_name="comp_sr_model_pi_true_scale_constantlambda_multiplicative.csv", path_integration = True, optimize_lr=True)

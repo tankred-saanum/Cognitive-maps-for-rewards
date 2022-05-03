@@ -31,6 +31,8 @@ subjects = list(range(subj_start, subj_stop))
 
 ## set up the perimeters of the arena
 std = np.std(np.linspace(-15, 15, 100))
+mean = np.mean(np.linspace(-15, 15, 100))
+
 monster_ids = np.arange(12)
 sign = [[-1, -1], [-1, 1], [1, 1], [1, -1]]
 
@@ -100,8 +102,8 @@ for subj in subjects:
         y_pos = df[:, 1]
 
         ## we scale by the true std
-        x_pos = (x_pos - np.mean(x_pos))/std
-        y_pos = (y_pos - np.mean(y_pos))/std
+        x_pos = (x_pos - mean)/std
+        y_pos = (y_pos - mean)/std
 
         closest_monster = df[:, 2]
         closest_monster -= 1
@@ -178,12 +180,12 @@ for subj in subjects:
         path_integration_kernels[n][subj] = PI_K
 
 
+#
+#
+# with open('path_integration_kernels_no_noise_true_scale.pickle', 'wb') as handle:
+#     pickle.dump(path_integration_kernels, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-
-with open('path_integration_kernels_no_noise.pickle', 'wb') as handle:
-    pickle.dump(path_integration_kernels, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-with open('path_integration_monster_locations_no_noise.pickle', 'wb') as handle:
+with open('path_integration_monster_locations_no_noise_true_scale.pickle', 'wb') as handle:
     pickle.dump(PI_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 # with open('avg_temporal_distances.pickle', 'wb') as handle:
