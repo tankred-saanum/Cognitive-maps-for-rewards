@@ -178,7 +178,10 @@ def run_compositional_transition_counts_model(num_samples, file_name="comp_trans
 with open('transitions.pickle', 'rb') as handle:
     transition_dict = pickle.load(handle)
 
-with open('path_integration_monster_locations_no_noise.pickle', 'rb') as handle:
+# with open('path_integration_monster_locations_no_noise.pickle', 'rb') as handle:
+#     PI_dict = pickle.load(handle)
+
+with open('path_integration_monster_locations_no_noise_true_scale.pickle', 'rb') as handle:
     PI_dict = pickle.load(handle)
 
 
@@ -202,4 +205,6 @@ rewards = np.array(df["chosen_value"])
 
 states = np.arange(0, 12)
 
-run_compositional_transition_counts_model(num_samples=20, file_name="comp_transition_counts_model.csv")
+
+run_compositional_transition_counts_model(num_samples=20, file_name="comp_transition_counts_model_true_loc.csv", path_integration = False)
+run_compositional_transition_counts_model(num_samples=20, file_name="comp_transition_counts_model_pi.csv", path_integration = True)
