@@ -319,10 +319,108 @@ def RBF(X1, X2, var = 1, l = 1):
 tbt_weights = pd.read_csv("tBt_euc_w_review.csv").values
 
 # the alternative effects
-effects_df = pd.read_csv("effects_and_weights_reviews.csv")
+
+### Here we configure which weights we'd like to use for constructing the compositional kernel
+## Comment out whichever weights you dont want to use
+
+### THIS IS WHERE MOST HYPERPARAMETERS ARE CONFIGURED
+### Based on compositional hyperparameters
+#effects_df = pd.read_csv("effects_and_weights_review_compositionalfit.csv")
+### Based on individual hyperparameters
+#effects_df = pd.read_csv("effects_and_weights_review_individualfits.csv")
+### Based on individual hyperparameters where the spatial kernel uses the true locations
+effects_df = pd.read_csv("effects_and_weights_review_individualfits_true_locations.csv")
+
+
+### Set this variable to False if you want to use the true monster location for kernel construction
+path_integration = False
+
+
+####### THESE ARE THE DIFFERENT LENGTHSCALE SETTINGS WE'RE TESTING
+####### LEAVE ALL OPTIONS COMMENTED OUT EXCEPT THE ONE YOU WANT TO USE
+
+###############################
+### COMPOSITIONAL FIT WHEN TEMPORAL LENGTHSCALE IS OPTIMIZED
+# lengthscale_temp = 3.384
+# lengthscale_spatial = 1.742
+# learning_rate = 0.001
+
+
+#### COMPOSITIONAL FITS HPARAMS
+# learning_rate = 0.001
+#
+# lengthscale_temp = 1
+# lengthscale_spatial = 2.1526
+
+
+
+
+#### COMPOSITIONAL FITS HPARAMS -- TRUE LOCATIONS
+learning_rate = 0.001
+
+lengthscale_temp = 1
+lengthscale_spatial = 3.1789
+
+
+#### INDIVIDUAL FITS True spatial locations
+# learning_rate = 0.4125
+#
+# lengthscale_temp = 1
+# lengthscale_spatial = 1.2424
+
+
+#### INDIVIDUAL FITS Path integrated spatial locations
+# learning_rate = 0.4125
+#
+# lengthscale_temp = 1
+# lengthscale_spatial = 0.7696
+
+
+### LOW SETTINGS
+# learning_rate = 0.001
+# lengthscale_temp = 0.1
+# lengthscale_spatial = 0.1
+
+### MEDIUM TO LOW SETTINGS
+# learning_rate = 0.001
+# lengthscale_temp = 0.5
+# lengthscale_spatial = 0.5
+
+
+### MEDIUM SETTINGS
+# learning_rate = 0.001
+# lengthscale_temp = 1
+# lengthscale_spatial = 1
+
+### MEDIUM + SETTINGS
+# learning_rate = 0.001
+# lengthscale_temp = 1.5
+# lengthscale_spatial = 1.5
+
+### MEDIUM HIGH SETTINGS
+# learning_rate = 0.001
+# lengthscale_temp = 2.5
+# lengthscale_spatial = 2.5
+
+### HIGH SETTINGS
+# learning_rate = 0.001
+# lengthscale_temp = 3.5
+# lengthscale_spatial = 3.5
+
+##################################
+
+### this variable controls whether the data used for fmri analysis should be saved
+save_data = True
+creation_date = '26.4.2022-compositional_hparams_true_locations'
+###########
+
+
+
+
 m_rewards = np.array(effects_df["m.rewards"])
 
 final_weights_euclidean = np.array(effects_df["w.euc"])
+
 trial_weights = np.array(effects_df["trialw"])
 
 per_trial_df = pd.read_csv("per_trial_df_review.csv")
@@ -365,10 +463,6 @@ last_subj = -1  # make this an id so that the first participant isn't identical 
 subj_counter = -1
 
 
-### this variable controls whether the data used for fmri analysis should be saved
-save_data = True
-creation_date = '31.3.2022-highLengthscale'
-###########
 
 
 
@@ -443,27 +537,14 @@ for i, subj_id in enumerate(subj):
         trial_counter = 0
         ### set hyperparameters
 
+        if path_integration:
+            loc = PI_dict[subj_id]
+        else:
+            #mp = MonsterPrior()
+            loc = monster_loc
 
-        loc = PI_dict[subj_id]
-        learning_rate = 0.001
 
-        ### OPTIMAL SETTINGS FOR BEHAVIORAL MODELLING
-        lengthscale_temp = 3.384
-        lengthscale_spatial = 1.742
 
-        ### LOW SETTINGS
-        # lengthscale_temp = 0.1
-        # lengthscale_spatial = 0.1
-
-        ### MEDIUM SETTINGS
-
-        # lengthscale_temp = 1
-        # lengthscale_spatial = 1
-
-        ### HIGH SETTINGS
-
-        # lengthscale_temp = 3.5
-        # lengthscale_spatial = 3.5
 
         context_dict = {}
         context_dict[1] ={"training_idx": [], "rewards": [], "state_rewards" : np.zeros(len(np.arange(12)))}
@@ -517,7 +598,8 @@ for i, subj_id in enumerate(subj):
 
 
         ##### weighted
-        comp_kernel = (spatial_kernel + kernel_temp_sr)/2
+        #comp_kernel = (spatial_kernel + kernel_temp_sr)/2
+        comp_kernel = (spatial_kernel*final_weights_euclidean[subj_counter]) + (kernel_temp_sr * (1- final_weights_euclidean[subj_counter]))
 
         if save_data:
             Path(f"fmri{creation_date}/matrices/{subj_id}").mkdir(parents=True, exist_ok=True)

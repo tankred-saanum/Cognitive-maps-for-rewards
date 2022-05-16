@@ -74,7 +74,7 @@ def compute_temporal_distances(timeseries):
             temporal_dists = scipy.spatial.distance.cdist(occurances_i.reshape(-1, 1), occurances_j.reshape(-1, 1))
             min_temporal_dist = temporal_dists.min() # take the shortest time interval between monster visits
             mean_temporal_dist = temporal_dists.mean()
-            mat[monster, monster_j] = min_temporal_dist
+            mat[monster, monster_j] = mean_temporal_dist
     return mat, unique_sorted # only update for monsters that were visited
 
 
@@ -185,8 +185,12 @@ for subj in subjects:
 # with open('path_integration_kernels_no_noise_true_scale.pickle', 'wb') as handle:
 #     pickle.dump(path_integration_kernels, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-with open('path_integration_monster_locations_no_noise_true_scale.pickle', 'wb') as handle:
-    pickle.dump(PI_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+# with open('path_integration_monster_locations_no_noise_true_scale.pickle', 'wb') as handle:
+#     pickle.dump(PI_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-# with open('avg_temporal_distances.pickle', 'wb') as handle:
+with open('avg_temporal_distances.pickle', 'wb') as handle:
+    pickle.dump(time_difference_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+#
+# with open('min_temporal_distances.pickle', 'wb') as handle:
 #     pickle.dump(time_difference_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
