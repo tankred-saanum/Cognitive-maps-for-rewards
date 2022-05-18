@@ -22,7 +22,7 @@ def temp_dist_model(distance_matrices, num_samples, file_name="temporal_dists_mo
 
 
     ## start loop
-    lengthscales = np.linspace(0.2, 4, num_samples)
+    lengthscales = np.linspace(0.1, 2, num_samples)
     header = lengthscales
     for n in range(num_samples):
         lengthscale = lengthscales[n]
@@ -114,11 +114,11 @@ def estimate_euclidean_model(K, R, training_idx, option_indices):
     options = mu[option_indices]
     return options[0] - options[1]
 
-# with open('avg_temporal_distances.pickle', 'rb') as handle:
-#     distances = pickle.load(handle)
-
-with open('min_temporal_distances.pickle', 'rb') as handle:
+with open('avg_temporal_distances.pickle', 'rb') as handle:
     distances = pickle.load(handle)
+
+# with open('min_temporal_distances.pickle', 'rb') as handle:
+#     distances = pickle.load(handle)
 
 
 df = pd.read_csv('choice_data.csv')
@@ -141,5 +141,5 @@ rewards = np.array(df["chosen_value"])
 
 states = np.arange(0, 12)
 
-#temp_dist_model(distance_matrices=distances, num_samples=100, file_name="avg_temporal_dists_model.csv")
-temp_dist_model(distance_matrices=distances, num_samples=100, file_name="min_temporal_dists_model.csv")
+temp_dist_model(distance_matrices=distances, num_samples=100, file_name="avg_temporal_dists_model.csv")
+#temp_dist_model(distance_matrices=distances, num_samples=50, file_name="min_temporal_dists_model.csv")
