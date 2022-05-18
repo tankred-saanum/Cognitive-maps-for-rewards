@@ -41,7 +41,7 @@ def temp_dist_model(distance_matrices, num_samples, file_name="temporal_dists_mo
 
 
                 distances = distance_matrices[subj_id]
-                kernel = np.exp(distances/(2*lengthscale**2))
+                kernel = np.exp(- (distances/(2*lengthscale**2)))
 
 
                 ### add observations for this context
