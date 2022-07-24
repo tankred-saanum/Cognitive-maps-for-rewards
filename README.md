@@ -1,5 +1,5 @@
 # Cognitive maps for generalizing rewards
-This repo contains code and some figures used for the behavioural modelling in our paper "Hippocampal spatio-temporal cognitive maps adaptively guide reward generalization".
+This repo contains code and some figures used for running the experiment as well as the behavioural modelling in our paper "Hippocampal spatio-predictive cognitive maps adaptively guide reward generalization".
 
 
 ## System requirements
