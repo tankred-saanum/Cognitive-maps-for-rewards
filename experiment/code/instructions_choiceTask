@@ -1,4 +1,0 @@
-Screen('TextSize', window, 30);
-textString = sprintf('Wir testen jetzt die Tasten.');
-DrawFormattedText(window, textString, 'center', 'center', white);
-Screen('Flip', window);

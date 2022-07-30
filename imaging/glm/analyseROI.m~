@@ -1,0 +1,506 @@
+% fvclear
+close all
+addpath(genpath('/data/p_02071/choice-maps/scripts/CanlabCore'))
+
+if ismac
+    bdir = '/Volumes/storageunified/';
+elseif isunix
+    bdir = '/data/';
+end
+
+% directory data is extracted from
+basedir = [bdir,'/pt_02071/choice-maps/imagingData/2ndLevel/design_179/'];
+addpath (genpath([bdir,'/tu_garvert_cloud/owncloud-gwdg/matlab_scripts']))
+
+savedir = [bdir,'/tu_garvert_cloud/owncloud-gwdg/Projects/ChoiceMaps/experiment/version_scan/datafiles/merged_data'];
+load([savedir,'/population_data.mat'])
+
+% con{1} = 'subj_value_rel_inferred_allmaps';
+% con{2} = 'subj_value_rel_experienced_allmaps';
+% con{3} = 'arena_dist_crossmap';
+% con{2} = '05_stayDistance';
+% con{3} = '06_switchDistance';
+% con{4} = '07_staySwitchDistance';
+% con{5} = '08_repetition';
+% con{6} = '09_staySwitchDistance';
+% con{1} = '03_allDistance_s8';
+
+con{1} = '03_allDistance_s8';
+% con{1} = '04_SRDistance_s8';
+% con{1} = '03_value_s8';
+
+% roi='139_both_03_s8_thr2p41_bilatEC';%'';%'143_both_03_s8_group2_thr2p41_bilatHippoc';%'elife_Fig2A_hippoc_entorh_mask_res';'142_both_03_s8_thr2p41_bilatEC';%'142_both_03_s8_thr2p41_bilatEC';%'135_both_03_s8_thr2p41_bilatHippoc';%'102_diff_rsa_arena_dist_allmaps_2p4_rERC';%'107_04_both_thrneg_2p5_right_ofc_res';%'107_04_both_thrneg_2p5_right_ofc_res'; %'';%'AlexaFig2_thr3p1_both_mPFC_res';%'c';%'elife_Fig2A_hippoc_entorh_mask_res';
+% roi='163_3_03_s8_thr2p41_bilatEC';%'';%'143_both_03_s8_group2_thr2p41_bilatHippoc';%'elife_Fig2A_hippoc_entorh_mask_res';'142_both_03_s8_thr2p41_bilatEC';%'142_both_03_s8_thr2p41_bilatEC';%'135_both_03_s8_thr2p41_bilatHippoc';%'102_diff_rsa_arena_dist_allmaps_2p4_rERC';%'107_04_both_thrneg_2p5_right_ofc_res';%'107_04_both_thrneg_2p5_right_ofc_res'; %'';%'AlexaFig2_thr3p1_both_mPFC_res';%'c';%'elife_Fig2A_hippoc_entorh_mask_res';
+% roi='161_3_03_s8_thr2p41_bilatEC';%'';%'143_both_03_s8_group2_thr2p41_bilatHippoc';%'elife_Fig2A_hippoc_entorh_mask_res';'142_both_03_s8_thr2p41_bilatEC';%'142_both_03_s8_thr2p41_bilatEC';%'135_both_03_s8_thr2p41_bilatHippoc';%'102_diff_rsa_arena_dist_allmaps_2p4_rERC';%'107_04_both_thrneg_2p5_right_ofc_res';%'107_04_both_thrneg_2p5_right_ofc_res'; %'';%'AlexaFig2_thr3p1_both_mPFC_res';%'c';%'elife_Fig2A_hippoc_entorh_mask_res';
+% roi='177_diff_03_s8_thr2p41_bilatStriatum';%
+% roi='Chadwick_gravity_res';%
+
+roi='179_3_03_s8_thr3p3_bilatEC';%
+% roi='212_3_07_s8_thr4p03_mPFC';%
+% roi='189_3_03_s8_thr3p3_rightEC';%
+% roi='189_both_03_s8_thr3p3_rightEC';%
+
+maxSubj = 152;
+s={'2','3','both','diff'};
+for subj = 101:maxSubj
+    for sess = 1:4
+        for c = 1:size(con,2)
+            if subj ~= 121 && subj ~= 136 && subj ~= 137 && subj ~= 138
+                session = s{sess};
+                if exist(fullfile(basedir,'mask',roi,['session_',session],con{c},sprintf('%d_%s_%s_%s.txt',subj,session,roi,con{c})),'file')
+                    pe(c,subj-100,sess) = load(fullfile(basedir,'mask',roi,['session_',session],con{c},sprintf('%d_%s_%s_%s.txt',subj,session,roi,con{c})));
+                else
+                    pe(c,subj-100,sess) = nan;
+                end
+            else
+                pe(c,subj-100,sess) = nan;
+            end
+        end
+    end
+end
+
+%%
+
+% fit = fitlm([peRed3' peRed4'], peOFCRed');
+% fit = fitlm([pe163(:,3) pe160(:,3) pe161(:,3) ], pe167OFC(:,4));
+
+%%
+
+predEffects = readtable([bdir,'/pt_02071/choice-maps/tankred_modling/fmri2/effects_and_weights.csv']);
+predEffectsArray = table2array(predEffects(:,2:end));
+predEffectsNames = predEffects.Properties.VariableNames(2:end);
+
+figure
+counter = 0;
+for sess = 1:4
+    peRed = squeeze(pe(c,:,sess));
+    peRed([21,36,37,38]) = [];
+    for i = 1:7
+        counter = counter+1;
+        subplot(4,7,counter)
+        scatter(peRed,predEffectsArray(:,i),'filled')
+        lsline
+        [r,p] = corr(peRed', predEffectsArray(:,i),'rows','complete','type','Spearman')
+        title(sprintf('r = %.2f, p = %.3f',r,p));
+        ylabel(predEffectsNames{i},'Interpreter','None')
+        xlabel('Parameter estimate')
+    end
+    
+end
+prepImg
+
+
+%%
+figure;
+correct = all_data.overall_cr;
+correct([21,36,37,38]) = [];
+
+
+for i = 2:5
+    subplot(3,2,i-1)
+    scatter(predEffectsArray(:,i),correct,'filled')
+    lsline
+    [r,p] = corr(predEffectsArray(:,i),correct,'rows','complete','type','Spearman')
+    title(sprintf('r = %.2f, p = %.2f',r,p));
+    xlabel(predEffectsNames{i},'Interpreter','None')
+    ylabel('Percent correct')
+end
+prepImg
+%%
+ 
+
+% peRed3 = squeeze(pe3(c,:,2));
+% peRed3([21,36,37,38]) = [];
+% peRed4 = squeeze(pe4(c,:,2));
+% peRed4([21,36,37,38]) = [];
+% rRed = nanmean(r,2);
+% rRed([21,36,37,38]) = [];
+% 
+% neg = (peRed3-peRed4)./(peRed3);
+% noOutlier = neg < (nanmean(neg) +  3*nanstd(neg));
+% figure; scatter(rRed(noOutlier),neg(noOutlier)),lsline
+% 
+% fit = fitlm([predEffectsArray(:,7)],  peRed3')
+
+% figure; 
+% subplot(1,2,1)
+% scatter(predEffectsArray(:,7), peRed4), lsline
+% subplot(1,2,2)
+% scatter(predEffectsArray(:,7), peRed3), lsline
+
+
+%%
+
+% mask = read_avw((['/data/pt_02071/choice-maps/masks/',roi,'.nii']));
+% % mask = read_avw(['/data/pt_02071/choice-maps/masks/',roi,'.nii']);
+%
+% for subj = 101:maxSubj
+%     for session = 2:3
+%         for c = 1:size(con,2)
+%             if exist(fullfile(basedir,sprintf('session_%u',session),con{c},sprintf('%d_s_con_000%s.nii',subj,con{c}(2))),'file')
+%
+%                 V = read_avw((fullfile(basedir,sprintf('session_%u',session),con{c},sprintf('%d_s_con_000%s.nii',subj,con{c}(2)))));
+%                 pe(c,subj-100,session-1) = nanmean(V(mask==1));
+%             else
+%                 pe(c,subj-100,session-1) = nan;
+%             end
+%         end
+%     end
+% end
+
+
+
+colors = lbmap(52,'RedBlue');
+
+% Suppression effects by session
+figure
+for session = 1:size(pe,3)
+    
+    subplot(2,2,session)
+    for c = 1:size(con,2)
+        %         no_outlier = ones(maxSubj-100,1)==1;%pe(c,:,session) < (nanmean(pe(c,:,session)) + 3*nanstd(pe(c,:,session))) &  pe(c,:,session) > (nanmean(pe(c,:,session)) - 3*nanstd(pe(c,:,session)));
+        no_outlier = pe(c,:,session) < (nanmean(pe(c,:,session)) + 3*nanstd(pe(c,:,session))) &  pe(c,:,session) > (nanmean(pe(c,:,session)) - 3*nanstd(pe(c,:,session)));
+        hold on
+        bar(c,nanmean(pe(c,no_outlier,session)),'FaceColor',colors(c,:));
+        ax = gca;
+        ax.TickLabelInterpreter = 'none';
+        ax.XTickLabel{c} = con{c};
+        
+        hold on
+        v = c+0.2+0.4*rand(sum(no_outlier),1);
+        %         scatter(v,pe(c,no_outlier,session),35,colors(20,:),'filled')
+        
+        %         scatter(v,pe(c,no_outlier,session),35,'k')
+        %                 scatter(v,pe(c,no_outlier,session),30,'k')
+        errorbar(c,nanmean(pe(c,no_outlier,session)),nanstd(pe(c,no_outlier,session))/sqrt(49),'k');
+        [h,p] = ttest(pe(c,no_outlier,session))
+        if h==1
+            bar(c,nanmean(pe(c,no_outlier,session)),'FaceColor',colors(20+c,:));
+            errorbar(c,nanmean(pe(c,no_outlier,session)),nanstd(pe(c,no_outlier,session))/sqrt(49),'k');
+        end
+    end
+    title(sprintf('Session %u',session), 'Interpreter', 'none')
+    xticks(1:size(con,2))
+    xtickangle(45)
+    axislength(session,:) = ax.YLim;
+end
+%
+% for session = 1:4
+%     subplot(2,2,session)
+%     ax = gca;
+%     ax.YLim = [min(axislength(:,1)) max(axislength(:,2))];
+%
+% end
+prepImg
+
+%%
+% all_data.r_arena_true(all_data.r_arena_true<0.5) = nan;
+
+
+
+load([savedir,'/subj_',num2str(subj),'/data_',num2str(subj),'.mat']);
+p_obj = data.mat{2}.data.objPositions*15;
+trueDist = squareform(pdist(p_obj(:,[1 3])));
+
+for subj = 101:152
+    load([bdir,'/p_02071/choice-maps/my_dataset/sub-',num2str(subj),'/sub-',num2str(subj),'_exploration_data.mat']);
+    timeBetw(subj,:,:) = atmin{3};
+    r = corrcoef(atmin{3}(eye(12)~=1), trueDist(eye(12)~=1),'rows','complete');
+    exploreArena(subj-100) = r(1,2);
+    duration(subj-100) = explorationDuration;
+end
+
+
+figure; 
+for i = 1:4
+    subplot(2,2,i)
+        scatter(exploreArena,nanmean(pe(c,:,i),3),'filled'), lsline
+    [r,p] = corrcoef(exploreArena,nanmean(pe(c,:,i),3),'rows','complete')
+    xlabel('Correlation experienced distance and true distance')
+    ylabel('Parameter estimates')
+    title(sprintf('r = %.2f, p = %.2f',r(1,2),p(1,2)));
+    prepImg
+end
+
+
+
+figure; scatter(pe(c,:,1),pe(c,:,2),'filled'),lsline
+[r,p] = corrcoef(pe(c,:,1),pe(c,:,2),'rows','complete')
+xlabel('Paramter estimates session 1')
+ylabel('Paramter estimates session 2')
+
+exploreArenaRed = exploreArena;
+exploreArenaRed([21,36,37,38]) = [];
+
+%%
+
+
+load ([bdir,'/tu_garvert_cloud/owncloud-gwdg/Projects/ChoiceMaps/experiment/version_scan/datafiles/merged_data/population_data.mat'])
+
+ix = (all_data.r_arena_true < 0.5);
+ix = ix(1:52);
+% ix = zeros(52,1);
+
+% figure, imagesc(corr([nanmean(pe(:,~ix,1),3)',...
+%     all_data.overall_cr(~ix), ...                       % 4
+%     nanmean(nanmean(all_data.cr_RSA(~ix,:,:),3),2),...  % 5
+%     nanmean(all_data.cr_RSA(~ix,:,:),3), ...            % 6 7
+%     nanmean(all_data.error(~ix,:,:),2), ...             % 8
+%     squeeze(all_data.error_post(~ix,1,:)), ...          % 9 10
+%     squeeze(all_data.error_post(~ix,2,:)), ...          % 11 12
+%     all_data.r_arena_true(~ix)', ...                    % 13
+%     all_data.r_value(~ix)], 'rows','complete'));         % 14
+
+
+matrix = [nanmean(pe(:,~ix,1),3)',...
+    all_data.overall_cr(~ix), ...                       % 4
+    nanmean(nanmean(all_data.cr_RSA(~ix,:,:),3),2),...  % 5
+    nanmean(all_data.cr_RSA(~ix,:,:),3), ...            % 6 7
+    nanmean(all_data.error(~ix,:,:),2), ...             % 8
+    squeeze(all_data.error_post(~ix,1,:)), ...          % 9 10
+    squeeze(all_data.error_post(~ix,2,:)), ...          % 11 12
+    all_data.r_arena_true(~ix)', ...                    % 13
+    all_data.r_value(~ix)];
+
+
+% h=corr(matrix, 'rows','complete');         % 14
+% 
+% figure, plot(h(1,:))
+% figure, plot(h(2,:))
+% figure, plot(h(3,:))
+
+% compute squared error for inference rating
+real_value = [data.mat{3}.data.settings.value(1,:) data.mat{3}.data.settings.value(2,:)];
+real = repmat(real_value([data.mat{3}.data.options.inference_objects(1,:) data.mat{3}.data.options.inference_objects(2,:)+12]),52,1);
+rate = all_data.value_rating(:,[data.mat{3}.data.options.inference_objects(1,:) data.mat{3}.data.options.inference_objects(2,:)+12]);
+
+inference_sqError_real_rate = sqrt(sum((rate-real).^2,2)/4);
+
+
+fit = fitlm(squeeze(pe(c,:,[1 2])), inference_sqError_real_rate)
+fit = fitlm(squeeze(pe(c,:,[1 2])), all_data.overall_cr)
+
+
+% compute squared error for inference rating
+
+inference_sqError_real_rate([21 36 37 38])= [];
+% inference_sqError_mod_rate([21 36 37 38])= [];
+% inference_sqError_mod_real([21 36 37 38])= [];
+
+figure;
+for sess = 1:4
+    peRed = squeeze(pe(c,:,sess));
+    peRed([21,36,37,38]) = [];
+    subplot(2,2,sess)
+    scatter(peRed,inference_sqError_real_rate,'filled'), lsline
+    [r,p] = corrcoef(peRed,inference_sqError_real_rate,'rows','complete');
+    ylabel('Value inference squared error'),
+    xlabel(con{c})
+    title(sprintf('r = %.2f, p = %.2f',r(1,2),p(1,2)))
+    prepImg
+end
+%%
+sess=2;
+peEC = squeeze(pe(c,:,2));
+peEC([21,36,37,38]) = [];
+% peStr = squeeze(peStriatum(1,:,4));
+% peStr([21,36,37,38]) = [];
+
+    
+[paths, stats] = mediation(peRed', correct, predEffectsArray(:,3), 'boot', 'plots', 'verbose', 'bootsamples', 10000);
+[paths, stats] = mediation(peRed', inference_sqError_real_rate, predEffectsArray(:,3), 'boot', 'plots',  'bootsamples', 10000); 
+
+figure; 
+
+subplot(2,2,1)
+peRed = squeeze(pe(c,:,2));
+peRed([21,36,37,38]) = [];
+scatter(peRed,predEffectsArray(:,3),'filled')
+lslinec
+title(sprintf('r = %.2f, p = %.3f',r(1,2),p(1,2)));
+ylabel(predEffectsNames{3},'Interpreter','None')
+xlabel('Parameter estimate')
+% 
+
+subplot(2,2,2)z
+scatter(peRed,correct,'filled'), lsline
+[r,p] = corrcoef(peRed, correct,'rows','complete');
+ylabel('Percent correct'),
+xlabel('Parameter estimates')
+title(sprintf('r = %.2f, p = %.3f',r(1,2),p(1,2)))
+prepImg
+
+subplot(2,2,3)
+scatter(peRed,inference_sqError_real_rate,'filled'), lsline
+[r,p] = corrcoef(peRed,inference_sqError_real_rate,'rows','complete');
+ylabel('Inference error'),
+xlabel('Parameter estimates')
+title(sprintf('r = %.2f, p = %.3f',r(1,2),p(1,2)))
+prepImg
+
+subplot(2,2,4)
+r_arena_true = all_data.r_arena_true;
+r_arena_true([21,36,37,38]) = [];
+ix = r_arena_true > 0.5;
+scatter(r_arena_true(ix),...
+    inference_sqError_real_rate(ix),'filled')
+[r,p] = corr(r_arena_true(ix)',...
+    inference_sqError_real_rate(ix),'rows','complete','Type','Spearman')
+lsline
+
+prepImg
+xlabel('Map knowledge')
+ylabel('Inference error')
+title(sprintf('r = %.2f, p = %.3f',r,p))
+
+    %%
+
+figure;
+for sess = 1:4
+    ix = all_data.r_value > 0;
+    subplot(2,2,sess)
+    scatter(all_data.r_value(ix),nanmean(pe(c,ix,sess),3)','filled'), lsline
+    [r,p] = corr(all_data.r_value(ix),nanmean(pe(c,ix,sess),3)','rows','complete','type','Pearson');
+    xlabel('Value correlation'),
+    ylabel(['PE session ', num2str(sess)])
+    title(sprintf('r = %.2f, p = %.2f',r,p))
+    prepImg
+end
+
+
+
+figure;
+for sess = 1:4
+    subplot(2,2,sess)
+    scatter(nanmean(pe(c,:,sess),3)',all_data.overall_cr,'filled'), lsline
+    [r,p] = corr(nanmean(pe(c,:,sess),3)',all_data.overall_cr,'rows','complete','type','Spearman');
+    ylabel('Percent correct'),
+    xlabel(['PE session ', num2str(sess)])
+    title(sprintf('r = %.2f, p = %.2f',r,p))
+    prepImg
+end
+
+figure;
+for c = 1:size(pe,1)
+    subplot(1,size(pe,1),c)
+    scatter(nanmean(nanmean(all_data.cr_RSA,3),2),nanmean(pe(c,:,1),3)','filled'), lsline
+    [r,p] = corrcoef(nanmean(nanmean(all_data.cr_RSA,3),2),nanmean(pe(c,:,1),3)','rows','complete');
+    xlabel('Percent correct RSA'),
+    title(sprintf('r = %.2f, p = %.2f',r(1,2),p(1,2)))
+    prepImg
+end
+
+
+
+%% Inference
+
+value_inference = all_data.value_rating(:,[data.mat{3}.data.options.inference_objects(1,:) data.mat{3}.data.options.inference_objects(2,:)+12]);
+
+figure;
+subplot(2,2,1)
+boxplot((value_inference),'colors',[0 0.5 0.5],'positions',[1:3:12],'widths',0.7);
+prepImg
+ylim([0 100])
+value_inference([21 36 37 38],:) = [];
+title('Value rating')
+
+matrixDir = [bdir,'/pt_02071/choice-maps/tankred_modling/fmri2/'];
+T1 = readtable(fullfile(matrixDir,'new_comp_predictions_ctx1.csv'),'ReadRowNames', true);
+T2 = readtable(fullfile(matrixDir,'new_comp_predictions_ctx2.csv'),'ReadRowNames', true);
+% T1 = readtable(fullfile(matrixDir,'comp_final_predictions1.csv'),'ReadRowNames', true);
+% T2 = readtable(fullfile(matrixDir,'comp_final_predictions2.csv'),'ReadRowNames', true);
+rateRed = rate;
+rateRed([21,36,37,38],:) = [];
+
+value1 = table2array(T1(2:end,:));
+value2 = table2array(T2(2:end,:));
+
+model_values = [value1 value2];
+model_inference = model_values(:,[data.mat{3}.data.options.inference_objects(1,:) data.mat{3}.data.options.inference_objects(2,:)+12]);
+inference_sqError_real_model = sqrt(sum((model_inference-rateRed).^2,2)/4);
+
+
+
+subplot(2,2,2)
+boxplot((model_inference),'colors',[0 0.5 0.5],'positions',[1:3:12],'widths',0.7);
+prepImg
+title('Model predictions')
+ylim([0 100])
+
+subplot(2,2,3)
+scatter(inference_sqError_real_model,...
+    inference_sqError_real_rate,'filled'), lsline
+[r,p] = corrcoef(inference_sqError_real_model,...
+    inference_sqError_real_rate,'rows','complete');
+title(sprintf('r = %.2f, p = %.3f',r(1,2),p(1,2)))
+xlabel('Model predicted inference error')
+ylabel('Inference error')
+xlim([0 80])
+ylim([0 80])
+
+subplot(2,2,4)
+scatter(predEffectsArray(:,3),inference_sqError_real_rate,'filled')
+lsline
+[r,p] = corrcoef(predEffectsArray(:,3),inference_sqError_real_rate,'rows','complete')
+title(sprintf('r = %.2f, p = %.3f',r(1,2),p(1,2)));
+xlabel('Euclidean weight','Interpreter','None')
+ylabel('Inference error')
+
+prepImg
+
+cr = all_data.overall_cr;
+cr([21,36,37,38]) = [];
+
+figure;
+scatter(predEffectsArray(:,3),cr,'filled')
+lsline
+[r,p] = corrcoef(predEffectsArray(:,3),cr,'rows','complete')
+title(sprintf('r = %.2f, p = %.3f',r(1,2),p(1,2)));
+xlabel('Euclidean weight','Interpreter','None')
+ylabel('Percent correct')
+
+%%
+matrixDir = '/data/pt_02071/choice-maps/tankred_modling/fmri2/matrices';
+for subj = 101:152
+    try
+        eu = table2array(readtable(fullfile(matrixDir,num2str(subj),'rich_euclidean_kernel_matrix.csv')));
+        eu = eu(triu(ones(12,12),1)~=0);
+        SR = table2array(readtable(fullfile(matrixDir,num2str(subj),'SR_kernel_matrix.csv')));
+        SR = SR(triu(ones(12,12),1)~=0);
+        comb = table2array(readtable(fullfile(matrixDir,num2str(subj),'weighted_comp_kernel_matrix.csv')));
+        comb = comb(triu(ones(12,12),1)~=0);
+        
+        R(subj-100,:,:) = corr([eu,SR,comb]);
+    catch
+        R(subj-100,:,:) = nan
+    end 
+end
+
+%%
+figure
+counter = 0;
+for subj = 101:152
+    try
+        counter = counter+1;
+        subplot(3,4,counter)
+        matrixDir = '/data/pt_02071/choice-maps/tankred_modling/fmri/matrices';
+        SR = table2array(readtable(fullfile(matrixDir,num2str(subj),'SR_kernel_matrix.csv')));
+        SR = SR(triu(ones(12,12),1)~=0);
+        imagesc(squareform(SR))
+        axis equal off
+        counter = counter+1;
+        subplot(3,4,counter)
+        matrixDir = '/data/pt_02071/choice-maps/tankred_modling/fmri2/matrices';
+        SR = table2array(readtable(fullfile(matrixDir,num2str(subj),'SR_kernel_matrix.csv')));
+        SR = SR(triu(ones(12,12),1)~=0);
+        imagesc(squareform(SR))
+        axis equal off
+        prepImg
+        
+        R(subj-100,:,:) = corr([eu,SR,comb]);
+    catch
+        R(subj-100,:,:) = nan
+    end 
+end
+
+

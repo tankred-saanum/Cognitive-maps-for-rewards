@@ -1,0 +1,16 @@
+
+*** These modified files were found in JOE when it aborted on Sat Jul 30 13:45:27 2022
+*** JOE was aborted by UNIX signal 1
+
+*** File '(Unnamed)'
+/data/tu_garvert_cloud/Projects/ManyMaps/many-maps/.git/COMMIT_EDITMSG
+/data/tu_garvert_cloud/Projects/ManyMaps/many-maps/.git/COMMIT_EDITMSG
+/data/tu_garvert_cloud/owncloud-gwdg/Projects/ManyMaps/many-maps/.git/COMMIT_EDITMSG
+/data/p_02071/choice-maps/scripts/preprocessing/.git/COMMIT_EDITMSG
+/data/p_02071/choice-maps/Cognitive-maps-for-rewards/src/fmri/info.txt
+
+*** File '* Startup Log *'
+Processing '/etc/joe/jmacsrc'...
+Processing '/etc/joe/ftyperc'...
+Finished processing /etc/joe/ftyperc
+Finished processing /etc/joe/jmacsrc
