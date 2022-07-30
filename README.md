@@ -1,5 +1,10 @@
 # Cognitive maps for generalizing rewards
-This repo contains code and some figures used for running the experiment as well as the behavioural modelling in our paper "Hippocampal spatio-predictive cognitive maps adaptively guide reward generalization".
+This repo belongs to our paper "Hippocampal spatio-predictive cognitive maps adaptively guide reward generalization". It contains:
+- code to run the study
+- behavioural data and subject-specific parameter estimates extracted from various regions of interest
+- code to run behavioural analyses, computational modeling and imaging analyses
+- code to reproduce the main figures in the manuscript
+- group t-stat brain images reported in the paper
 
 
 ## System requirements
@@ -35,3 +40,4 @@ Examples:
 To run the behavioural analyses, run the R file "parameter_fits.R" in the src folder.
 To produce the model data used in these analyses, run the "parameter_search_notebook.ipynb" script in Jupyter Notebook.
 To produce the predictors used in the fMRI analyses, run the "extract_fmri_notebook.ipynb" script in Jypter Notebook.
+To reproduce the figures run the corresponding file in the figures folder
