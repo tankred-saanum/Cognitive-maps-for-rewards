@@ -1,0 +1,17 @@
+#!/bin/bash
+#
+# run 1st Level analysis on the condor cluster
+#
+# (c) Mona Garvert <garvert@cbs.mpg.de>  August 2019
+
+executable = /afs/cbs.mpg.de/software/scripts/envwrap
+arguments = /data/p_02071/choice-maps/scripts/designs/run_groupContrasts.sh
+universe = vanilla
+output = /data/pt_02071/choice-maps/imagingData/2ndLevel/design_DESIGNID/output.out 
+error = /data/pt_02071/choice-maps/imagingData/2ndLevel/design_DESIGNID/output.error
+log = /data/pt_02071/choice-maps/imagingData/2ndLevel/design_DESIGNID/output.log
+request_memory = 3000
+request_cpus = 2 
+getenv = True
+notification = Error
+queue

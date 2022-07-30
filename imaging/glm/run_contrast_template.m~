@@ -1,0 +1,26 @@
+addpath /vols/Scratch/mgarvert/ManyMaps/myPreprocessing/spm12/;
+spm('defaults','fMRI');
+
+contrastToRun='XXjobidXX';
+disp(contrastToRun)
+
+% for i=1:numel(inputs)
+    fprintf([repmat('%%',1,72) '\n']);
+    try
+    	load(contrastToRun);
+        who
+        
+	fprintf('Design specification contrast %s\n',contrastToRun);
+        spm_jobman('run',contrast);
+		fprintf('Done\n');
+        fprintf([repmat('%%',1,72) '\n'])
+        
+    catch
+        warning('Estimation failed.');
+		warning(lasterr);
+    end
+    fprintf([repmat('%%',1,72) '\n']);
+save(contrastToRun)
+ % end
+
+
