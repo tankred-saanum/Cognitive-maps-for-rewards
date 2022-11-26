@@ -4,9 +4,10 @@ close all
 
 bdir = '/data/p_02071/choice-maps/Cognitive-maps-for-rewards/';
 
-
-subjList = 101:152;
-subjList([21,36,37,38]) = [];
+startSubj = 101;
+endSubj = 152;
+subjList = startSubj:endSubj;
+subjList([21,36,37,38]) = []; % removed due to technical issues
 
 % Analyse population data
 savedir = [bdir,'/behavior/datafiles/merged_data'];
@@ -23,12 +24,14 @@ figure
 subj = [101 145 131];
 cm = [186 156 209]/255;
 
-for c = 1:3
-    load([savedir,'/subj_',num2str(subj(c)),'/data_',num2str(subj(c)),'.mat']);
-    load([bdir,'/behavior/datafiles/merged_data/subj_',num2str(subj(c)),'/sub-',num2str(subj(c)),'_exploration_data.mat'])
-    subplot(1,3,c)
+for figurec = 1:3
+    load([savedir,'/subj_',num2str(subj(figurec)),'/data_',num2str(subj(figurec)),'.mat']);
+    load([bdir,'/behavior/datafiles/merged_data/subj_',num2str(subj(figurec)),'/sub-',num2str(subj(figurec)),'_exploration_data.mat'])
+    subplot(1,3,figurec)
     plot(explorationPath(:,1),explorationPath(:,2),'color','k');
     hold on
+
+    writematrix(explorationPath,sprintf('source_data/figure2/source_data_fig2a_%u.csv',figurec)) 
     
     % plot object locations
     p_obj = data.mat{2}.data.objPositions*15;
@@ -44,8 +47,8 @@ prepost = {'pre','post'};
 
 error_post = nan(48,2,2,12);
 
-for c = 1:length(subjList)
-    subj = subjList(c);
+for figurec = 1:length(subjList)
+    subj = subjList(figurec);
     disp(subj)
     load([savedir,'/subj_',num2str(subj),'/data_',num2str(subj),'.mat']);
     radius = data.mat{2}.data.radius;
@@ -56,8 +59,8 @@ for c = 1:length(subjList)
             for trial = 0:11
                 d = eval(['data.viz.session_',num2str(session),'.',prepost{p},'.positionObject.run_0.trial_',num2str(trial)]);
                 
-                position(c,d.stim+1,session-1,p,:) = [d.position(end,1),d.position(end,3)];
-                error_post(c,session-1,p,d.stim+1) = pdist([squeeze(position(c,d.stim+1,session-1,p,:))';[p_obj(d.stim+1,1),p_obj(d.stim+1,3)']])/(radius*2)*100;
+                position(figurec,d.stim+1,session-1,p,:) = [d.position(end,1),d.position(end,3)];
+                error_post(figurec,session-1,p,d.stim+1) = pdist([squeeze(position(figurec,d.stim+1,session-1,p,:))';[p_obj(d.stim+1,1),p_obj(d.stim+1,3)']])/(radius*2)*100;
                 
             end
         end
@@ -75,14 +78,17 @@ for session = 1:2
     scatter(repmat([2,3],48,1),squeeze(nanmean(error_post(:,session,:,:),4)),'MarkerFaceColor','k')
     set(gca,'XTickLabel',{'pre','post'})
     ylabel('Object positioning memory error (% arena size)')
-    plot([ones(48,1)*(2) ones(48,1)*(3)]',(squeeze(nanmean(error_post(:,session,:,:),4)))','k')
-    
+    plot([ones(48,1)*(2) ones(48,1)*(3)]',(squeeze(nanmean(error_post(:,session,:,:),4)))','k') 
 end
 
-[h,p,tint,stats] = ttest(squeeze(nanmean(error_post(:,1,1,:),4)),squeeze(nanmean(error_post(:,1,2,:),4)))
-[h,p,tint,stats] = ttest(squeeze(nanmean(error_post(:,2,1,:),4)),squeeze(nanmean(error_post(:,2,2,:),4)))
+writematrix([subjList', squeeze(nanmean(error_post(:,1,1,:),4)),squeeze(nanmean(error_post(:,1,2,:),4)),...
+    squeeze(nanmean(error_post(:,2,1,:),4)),squeeze(nanmean(error_post(:,2,2,:),4))],'source_data/figure2/source_data_fig2b.csv')
 
-pos_error_allSess= ([squeeze(nanmean(error_post(:,1,:,:),4)) squeeze(nanmean(error_post(:,2,:,:),4)) ])
+w = table(categorical([1 1 2 2].'), categorical([1 2 1 2].'), 'VariableNames', {'cond', 'time'}); % within-design
+d = table(squeeze(nanmean(error_post(:,1,1,:),4)),squeeze(nanmean(error_post(:,1,2,:),4)),...
+    squeeze(nanmean(error_post(:,2,1,:),4)),squeeze(nanmean(error_post(:,2,2,:),4)), 'VariableNames', {'c1_t0', 'c1_t1', 'c2_t0', 'c2_t1'});
+rm = fitrm(d, 'c2_t1-c1_t0 ~ 1', 'WithinDesign', w);
+ranova(rm, 'withinmodel', 'cond*time')
 
 
 
@@ -91,7 +97,7 @@ pos_error_allSess= ([squeeze(nanmean(error_post(:,1,:,:),4)) squeeze(nanmean(err
 %%
 p_obj = data.mat{2}.data.objPositions;
 true_dist       = zscore(pdist([p_obj(:,1),p_obj(:,3)]));
-for subj = startSubj:maxSubj
+for subj = startSubj:endSubj
     disp(['Subject ', num2str(subj)])
     load([savedir,'/subj_',num2str(subj),'/data_',num2str(subj),'.mat']);
     try
@@ -108,9 +114,12 @@ for subj = startSubj:maxSubj
         arena_true_error(subj-100) = nan;
     end
 end
+% remove subjects with incomplete data due to technical issues
+arena_true_error([21,36,37,38]) = []; 
 cr_by_trial([21,36,37,38],:) = [];
-cr_by_trial = cr_by_trial*100;
+cr_by_trial = cr_by_trial;
 
+writematrix(cr_by_trial,'source_data/figure2/source_data_fig2c.csv')
 
 figure('Renderer', 'painters', 'Position', [10 10 900 900])
 subplot(2,2,1)
@@ -121,7 +130,7 @@ end
 plot(1:10,meancr','Color',[0.5, 0.5, 0.5, 0.5])
 hold on
 for i = 1:10
-    boxplot(nanmean(cr_by_trial(:,(i-1)*10+1:i*10),2),'color',c{i},'positions',i,'widths',0.7);
+    boxplot(nanmean(cr_by_trial(:,(i-1)*10+1:i*10),2)*100,'color',c{i},'positions',i,'widths',0.7);
 end
     
 ylim([0 100])
@@ -166,12 +175,16 @@ for map = 1:2
     plot([90:-20:-90],0.5*ones(10,1),'--k')
     scatter([90:-20:-90],nanmean(cs,2),40,color{map},'filled','MarkerEdgeColor',color{map},...
         'MarkerFaceColor',color{map})
-    [h,p,ci,stats] = ttest(nanmean(cs(1:5,:)),nanmean(cs(6:10,:)))
+    [h,p,ci,stats] = ttest(nanmean(cs(1:5,:)),nanmean(cs(6:10,:)))    
 end
+
+T = array2table([subjList' squeeze(chosenSideMap(1,:,:)+1)'/2  squeeze(chosenSideMap(2,:,:)+1)'/2]);
+writetable(T,'source_data/figure2/source_data_fig2d.csv')
+
 %%
 load([bdir,'/figures/data/population_data.mat']);
 value_inference = all_data.value_rating(:,[data.mat{3}.data.options.inference_objects(1,:) data.mat{3}.data.options.inference_objects(2,:)+12]);
-value_inference([21,36,37,38],:) = nan;
+value_inference([21,36,37,38],:) = [];
 colors = [1 0 0; 1 0 0; 0 0 1; 0 0 1];
         
 subplot(2,2,3)
@@ -180,13 +193,15 @@ set(gcf,'renderer','Painters')
 boxplot((value_inference),'colors',colors,'positions',[1 4 5 8],'widths',0.7);
 hold on
 for i = 1:4
-    scatter(ones(52,1)*(pos_scatter(i)),value_inference(:,i),'filled','MarkerEdgeColor',colors(i,:),...
+    scatter(ones(48,1)*(pos_scatter(i)),value_inference(:,i),'filled','MarkerEdgeColor',colors(i,:),...
         'MarkerFaceColor',colors(i,:), 'MarkerFaceAlpha',.3)
     hold on
     if i == 1 || i == 3
-        plot([ones(52,1)*(pos_scatter(i)) ones(52,1)*(pos_scatter(i+1))]',value_inference(:,i:i+1)','k')
+        plot([ones(48,1)*(pos_scatter(i)) ones(48,1)*(pos_scatter(i+1))]',value_inference(:,i:i+1)','k')
     end
 end
+
+writematrix([subjList', value_inference],'source_data/figure2/source_data_fig2e.csv')
 
 hold on
 prepImg
@@ -195,16 +210,22 @@ ylim([0 100])
 xlim([0 9])
 
 %%
+inference_all = [nanmean(value_inference(:,1),2) nanmean(value_inference(:,3),2) nanmean(value_inference(:,2),2) nanmean(value_inference(:,4),2)];
+inference_all([1,21,36,37,38],:) = [];
 inference_performance = [nanmean(value_inference(:,[1 3]),2) nanmean(value_inference(:,[2 4]),2)];
-                    
+w = table(categorical([1 1 2 2].'), categorical([1 2 1 2].'), 'VariableNames', {'object', 'context'}); % within-design
+d = table(inference_all(:,1), inference_all(:,2),inference_all(:,3),inference_all(:,4),'VariableNames', {'c1_o0', 'c1_o1', 'c2_o0', 'c2_o1'});
+rm = fitrm(d, 'c2_o1-c1_o0 ~ 1', 'WithinDesign', w);
+ranova(rm, 'withinmodel', 'object*context')
+
+
 % compute squared error for inference rating
 real_value = [data.mat{3}.data.settings.value(1,:) data.mat{3}.data.settings.value(2,:)];
 real = repmat(real_value([data.mat{3}.data.options.inference_objects(1,:) data.mat{3}.data.options.inference_objects(2,:)+12]),52,1);
 rate = all_data.value_rating(:,[data.mat{3}.data.options.inference_objects(1,:) data.mat{3}.data.options.inference_objects(2,:)+12]);
 
 inference_sqError_real_rate = sqrt(sum((rate-real).^2,2)/4);
-
-exclude = [1,21,36,37,38];
+inference_sqError_real_rate([21,36,37,38],:) = [];
 
 subplot(2,2,4)
 set(gcf,'renderer','Painters')
@@ -213,6 +234,8 @@ scatter(arena_true_error,...
     'MarkerFaceColor',[0 0.7 0.7], 'MarkerFaceAlpha',.3), lsline
 [r,p] = corr(arena_true_error',...
     inference_sqError_real_rate,'rows','complete')
+
+writematrix([subjList', arena_true_error', inference_sqError_real_rate],'source_data/figure2/source_data_fig2f.csv')
 
 prepImg
 xlabel('Map reproduction error')
