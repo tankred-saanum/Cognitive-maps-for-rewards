@@ -20,7 +20,7 @@ class LaplacianGP():
     gp.set_training_data(training_idx, y)
     gp.set_covariance(K)
     mu = gp.mean()
-    
+
     Here K is the kernel matrix for all output points
 
     This object also contains methods for maximizing the marginal likelihood of the data using gradient descent (scipy.optimize integration).
@@ -36,13 +36,13 @@ class LaplacianGP():
         observed_nodes: an array of integers indexing the nodes whose values were observed
         y: an array of outcome values
         alpha: the lengthscale parameter
-        
+
         '''
 
 
         self.L = nx.normalized_laplacian_matrix(graph).todense()
         self.training_idx = observed_nodes
-        
+
         self.y = y
         self.alpha = alpha
         self.sigma = 0.01
@@ -69,25 +69,25 @@ class LaplacianGP():
         # create matrix containing covariance between all input points and all observed points
         self.K_input_obs = np.zeros((len(self.K), len(self.training_idx)))
 
-        
+
         # fill in with the values of indices of observations
         for i in range(len(self.K)):
-            
+
             self.K_input_obs[i] = self.K[i][self.training_idx]
 
 
     def mean(self, sigma=0.01, jitter = 0.0000001):
         ''' computes the posterior mean function '''
-        
+
         self.inv_K = np.linalg.inv(self.K_obs + (sigma*np.eye(len(self.K_obs))))
 
         return self.K_input_obs @ (self.inv_K) @ self.y
 
     def covariance(self, sigma = 0.1):
         ''' computes the posterior covariance '''
-        
+
         return self.K - (self.K_input_obs @ np.linalg.inv(self.K_obs + sigma * np.eye(len(self.K_obs))) @ self.K_input_obs.T)
-        
+
 
     def get_prior_covariance(self):
         ''' Getter for the kernel matrix'''
@@ -99,11 +99,11 @@ class LaplacianGP():
         self.y = y
 
     def set_covariance(self, covariance_matrix):
-        
+
         ''' This method allows one to set the full covariance matrix needed to arbitrary matrices
         (i.e. the matrix isn't computed from the graph Laplacian). This is useful if the covariance
         one wishes to use is already known for instance'''
-        
+
         self.K = covariance_matrix
 
         # the matrix which will contain the covariance between all training points
@@ -120,7 +120,7 @@ class LaplacianGP():
         for i in range(len(self.K)):
             self.K_input_obs[i] = self.K[i][self.training_idx]
 
-        
+
 
     def RBF(self, X1, X2, var = 1, l = 1):
         ''' Computes the RBF similarity between two n x m matrices, where n is
@@ -138,19 +138,19 @@ class LaplacianGP():
 
     def nll(self, theta):
         ''' This function is adapted from Martin Krasser's tutorial on GP regression,
-        using a Cholesky decomposition as a more numerically stable method for getting 
+        using a Cholesky decomposition as a more numerically stable method for getting
         the negative log likelihood, introduced in Rasmussen and Williams'''
         l = theta[0]
         noise = theta[1]
         K = self.RBF(self.X, self.X, var=noise, l=l)
         K = K + ((noise**2) *np.eye(len(self.y)))
 
-        
+
         L = np.linalg.cholesky(K)
-        
+
         S1 = scipy.linalg.solve_triangular(L, self.y, lower=True)
         S2 = scipy.linalg.solve_triangular(L.T, self.y, lower=False)
-        
+
         return np.sum(np.log(np.diagonal(L))) + \
                0.5 * self.y.dot(S2) + \
                0.5 * len(self.training_idx) * np.log(2*np.pi)
@@ -159,11 +159,11 @@ class LaplacianGP():
     def set_laplacian_matrix(self, L):
         self.L = L
 
-                
+
     def nll_diffusion_kernel(self, theta):
         ''' Performs nll minimization with scipy on a diffusion kernel'''
         l = theta[0]
-        noise = 0.1  ## add jitter
+        noise = 0.01  ## add jitter
         self.__K(self.L, l)
 
         K_ = self.K_obs.copy()
@@ -181,35 +181,35 @@ class LaplacianGP():
             eig_v[eig_v < 0] = -eig_v[eig_v < 0]
             lam = np.eye(len(K_))
             np.fill_diagonal(lam, eig_v)
- 
+
             K_ = eig_vec @ lam @ np.linalg.inv(eig_vec + (np.eye(len(eig_vec))*0.000000001))
             try:
                 L = np.linalg.cholesky(K_)
             except np.linalg.LinAlgError:
                 raise np.linalg.LinAlgError("Could not compute Cholesky decomposition after removing negative eigenvalues")
-            
-        
+
+
         S1 = scipy.linalg.solve_triangular(L, self.y, lower=True)
         S2 = scipy.linalg.solve_triangular(L.T, self.y, lower=False)
-        
+
         return np.sum(np.log(np.diagonal(L))) + \
                0.5 * self.y.dot(S2) + \
                0.5 * len(self.training_idx) * np.log(2*np.pi)
 
 
-        
-        
-    def evaluate_nll(self, noise=0.1):
-        ''' This one is better suited if you just want the nll of the GP's kernel kernel. 
+
+
+    def evaluate_nll(self, noise=0.01):
+        ''' This one is better suited if you just want the nll of the GP's kernel kernel.
         Assuming 0 noise'''
 
         K_ = self.K_obs.copy()
         K_ += ((noise**2)*np.eye(len(self.y)))
         L = np.linalg.cholesky(K_)
-        
+
         S1 = scipy.linalg.solve_triangular(L, self.y, lower=True)
         S2 = scipy.linalg.solve_triangular(L.T, self.y, lower=False)
-        
+
         return np.sum(np.log(np.diagonal(L))) + \
                0.5 * self.y.dot(S2) + \
                0.5 * len(self.training_idx) * np.log(2*np.pi)
@@ -244,5 +244,3 @@ class LaplacianGP():
         l = output.x
 
         return l
-        
-

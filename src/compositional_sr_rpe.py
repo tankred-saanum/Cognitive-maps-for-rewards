@@ -81,7 +81,7 @@ def estimate_GP(K, R, training_idx, option_indices):
     gp = LaplacianGP()
     gp.set_training_data(training_idx, R)
     gp.set_covariance(K)
-    mu = gp.mean()
+    mu = gp.mean(sigma=0.001)
     options = mu[option_indices]
     return [options[0], options[1]]
 
@@ -99,7 +99,7 @@ def estimate_euclidean_model(K, R, training_idx, option_indices):
     gp = LaplacianGP()
     gp.set_training_data(training_idx, R)
     gp.set_covariance(K)
-    mu = gp.mean()
+    mu = gp.mean(sigma=0.001)
     options = mu[option_indices]
     return options[0] - options[1]
 
@@ -135,7 +135,7 @@ def RBF(X1, X2, var = 1, l = 1):
     ## start loop
 
 
-def run_compositional_sr_model(num_samples, file_name="comp_sr_model.csv", path_integration = True, optimize_lr = False):
+def run_compositional_sr_model(num_samples, file_name="comp_sr_model.csv", path_integration = True, optimize_lr = False, optimize_post_weight=False):
 
 
     progress_counter = 0
@@ -153,17 +153,23 @@ def run_compositional_sr_model(num_samples, file_name="comp_sr_model.csv", path_
     ## start loop
     lengthscales = np.linspace(0.1, 4, num_samples)
     learning_rates = np.linspace(0.001, 0.5, num_samples)
-
-    if not optimize_lr:
-        l_x, l_y = np.meshgrid(lengthscales, lengthscales)
+    post_weights = np.linspace(0.01, 0.99, num_samples)
+    if optimize_post_weight:
+        l_x, l_y = np.meshgrid(lengthscales, post_weights)
         hparams = np.array([l_x.ravel(), l_y.ravel()]).T
     else:
-        l_x, l_y = np.meshgrid(lengthscales, learning_rates)
-        hparams = np.array([l_x.ravel(), l_y.ravel()]).T
+        if not optimize_lr:
+            l_x, l_y = np.meshgrid(lengthscales, lengthscales)
+            hparams = np.array([l_x.ravel(), l_y.ravel()]).T
+        else:
+            l_x, l_y = np.meshgrid(lengthscales, learning_rates)
+            hparams = np.array([l_x.ravel(), l_y.ravel()]).T
     header = np.arange(len(hparams))
     for n in range(len(hparams)):
 
         hparam_euc, hparam_temp = hparams[n, 0], hparams[n, 1]
+        if optimize_post_weight:
+            w_post = hparam_temp
         #lengthscale = 1
         last_subj = -1
         print("Progress: ", progress_counter / len(hparams), end = "\r")
@@ -173,6 +179,7 @@ def run_compositional_sr_model(num_samples, file_name="comp_sr_model.csv", path_
             current_context = contexts[i]
             if subj_id != last_subj:
                 w_euc = 0.5
+                p_euc = 0.5
 
                 ### If there's a change in the subject, recompute all the
                 ### representations, based on the exploration trials of the subject whose behaviour we seek to model.
@@ -210,6 +217,7 @@ def run_compositional_sr_model(num_samples, file_name="comp_sr_model.csv", path_
                     loc = mp.pos
                 kernel_space = RBF(loc, loc, l=hparam_euc)
                 kernel = ((kernel_space*w_euc) + (kernel_temp*(1-w_euc)))# / 2
+                kernel_comp_unweighted = (kernel_space + kernel_temp) / 2
 
                 ### add observations for this context
                 options = [op1[i], op2[i]]
@@ -227,7 +235,7 @@ def run_compositional_sr_model(num_samples, file_name="comp_sr_model.csv", path_
                 RPEs_euc[i, n] = reward
                 RPEs_temp[i, n] = reward
                 RPEs_comp[i, n] = reward
-                weights_ml[i, n] = 0.5
+                weights_ml[i, n] = p_euc
 
 
             elif len(context_dict[current_context]["rewards"]) == 0:  # check if participant has been able to make any observations in this context yet
@@ -244,7 +252,7 @@ def run_compositional_sr_model(num_samples, file_name="comp_sr_model.csv", path_
                 RPEs_euc[i, n] = reward
                 RPEs_temp[i, n] = reward
                 RPEs_comp[i, n] = reward
-                weights_ml[i, n] = 0.5
+                weights_ml[i, n] = p_euc
 
 
             else:
@@ -273,15 +281,19 @@ def run_compositional_sr_model(num_samples, file_name="comp_sr_model.csv", path_
                 reward_normalized = y_prime[-1]
 
 
-                p_euc, p_sr = weigh_kernels(kernel_space, kernel_temp, np.append(training_idx, [choice]), y_prime)
+                new_p_euc, new_p_sr = weigh_kernels(kernel_space, kernel_temp, np.append(training_idx, [choice]), y_prime)
                 marginal_euc, marginal_sr = get_ml(kernel_space, kernel_temp, np.append(training_idx, [choice]), y_prime)
+
+                p_euc = new_p_euc
+
+                #p_euc = (marginal_euc * p_euc) / ((marginal_euc * p_euc) + (marginal_sr * (1-p_euc)))
 
 
 
                 #
                 temp_preds = estimate_GP(kernel_temp, y, training_idx, option_indices=options)
                 euc_preds = estimate_GP(kernel_space, y, training_idx, option_indices=options)
-                comp_preds = estimate_GP(kernel, y, training_idx, option_indices=options)
+                comp_preds = estimate_GP(kernel_comp_unweighted, y, training_idx, option_indices=options)
 
                 diff = estimate_euclidean_model(kernel, y, training_idx, option_indices=options)
                 comp_rpe = comp_preds[decision] - reward_normalized
@@ -300,7 +312,9 @@ def run_compositional_sr_model(num_samples, file_name="comp_sr_model.csv", path_
                 ## store data
                 data_frame[i, n] = diff
                 #weights[i, n] = w_euc
-
+                kernel = ((kernel_space*p_euc) + (kernel_temp*(1-p_euc)))
+                if optimize_post_weight:
+                    kernel = (kernel * w_post) + (kernel_comp_unweighted * (1- w_post))
 
 
                 weights_rpe[i, n] = w_euc#np.zeros_like(data_frame)
@@ -335,6 +349,7 @@ def run_compositional_sr_model(num_samples, file_name="comp_sr_model.csv", path_
 
     RPEs_comp = pd.DataFrame(RPEs_comp)
     RPEs_comp.to_csv(f"param_fits/rpe_comp.csv", header=header, index=False)
+    return weights_rpe, RPEs_euc, RPEs_temp, weights_ml, ml_euc, ml_temp, RPEs_comp
 
 
     #return weights, RPEs_euc, RPEs_temp
@@ -376,19 +391,21 @@ states = np.arange(0, 12)
 #run_compositional_sr_model(num_samples=20, file_name="comp_sr_model_pi_true_scale_constantlambda.csv", path_integration = True, optimize_lr=True)
 
 #run_compositional_sr_model(num_samples=20, file_name="comp_sr_model_pi_true_scale_constantlambda_multiplicative.csv", path_integration = True, optimize_lr=True)
-weights_fitted = run_compositional_sr_model(num_samples=15, file_name="comp_sr_model_rpe_weight.csv", path_integration = False, optimize_lr=True)
+#weights_fitted = run_compositional_sr_model(num_samples=15, file_name="comp_sr_model_rpe_weight.csv", path_integration = False, optimize_lr=True)
+weights_fitted = run_compositional_sr_model(num_samples=15, file_name="comp_sr_model_bayes_weight_optimized.csv", path_integration = False, optimize_lr=False, optimize_post_weight=True)
+
+weights_rpe, RPEs_euc, RPEs_temp, weights_ml, ml_euc, ml_temp, RPEs_comp = weights_fitted
+weights_rpe, RPEs_euc, RPEs_temp, weights_ml, ml_euc, ml_temp, RPEs_comp = weights_rpe.values, RPEs_euc.values, RPEs_temp.values, weights_ml.values, ml_euc.values, ml_temp.values, RPEs_comp.values
+
+
+N = 1
 
 
 
 
-
-
-A, rpe_euc, rpe_temp = weights_fitted
-plt.plot(rpe_temp[:, N].reshape(48, 100).T)
-
-
-N = 7
-plt.plot(rpe_euc[:, N].reshape(48, 100).T - rpe_temp[:, N].reshape(48, 100).T)
-
-plt.plot(rpe_euc[:, N].reshape(48, 100).T.mean(axis=1))
-plt.plot(A.values[:,1].reshape(48, 100).T.mean(axis=1))
+plt.plot(RPEs_euc[:, N].reshape(48, 100).T.mean(axis=1) - RPEs_temp[:, N].reshape(48, 100).T.mean(axis=1))
+plt.plot(RPEs_euc[:, N].reshape(48, 100).T.mean(axis=1))
+plt.plot(RPEs_temp[:, N].reshape(48, 100).T.mean(axis=1))
+plt.plot(weights_rpe[:,N].reshape(48, 100).T.mean(axis=1))
+plt.plot(weights_ml[:,N].reshape(48, 100).T.mean(axis=1))
+weights_ml[:, N]
