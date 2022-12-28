@@ -14,11 +14,16 @@ addpath(genpath([bdir,'/analysis/helper_scripts']))
 savedir = [bdir,'/behavior/datafiles/merged_data'];
 
 % plot map structure
+removeID = [21,36,37,38]; % individuals to remove due to technical problems during scanning
 startSubj = 101;
+endSubj = 152;
+subjList = startSubj:endSubj;
+subjList(removeID) = []; % removed due to technical issues
+pid = subjList';
+
 load([savedir,'/subj_',num2str(startSubj),'/data_',num2str(startSubj),'.mat']);
 inference_objects = data.mat{3}.data.options.inference_objects;
 
-removeID = [21,36,37,38]; % individuals to remove due to technical problems during scanning
 
 %% Modeled inference
 load([bdir,'/figures/data/population_data.mat']);
@@ -58,6 +63,9 @@ prepImg
 title('Value rating of inference objects')
 ylim([0 100])
 
+T = table(pid,model_inference);
+writetable(T,'source_data/figure3/source_data_fig3c.csv')  
+
 %
 real_value = [data.mat{3}.data.settings.value(1,:) data.mat{3}.data.settings.value(2,:)];
 real = repmat(real_value([data.mat{3}.data.options.inference_objects(1,:) data.mat{3}.data.options.inference_objects(2,:)+12]),48,1);
@@ -80,6 +88,8 @@ kstest(inference_sqError_real_model)
 [b,stats] = robustfit(inference_sqError_real_model,inference_sqError_real_rate);
 disp([stats.dfe stats.t(2) stats.p(2)])
 
+T = table(pid,inference_sqError_real_model,inference_sqError_real_rate);
+writetable(T,'source_data/figure3/source_data_fig3d.csv')  
 
 subplot(2,2,3)
 % load data
@@ -96,6 +106,15 @@ prepImg
 [b,stats] = robustfit(predEffectsArray(:,2),predEffectsArray(:,1));
 disp([stats.dfe stats.t(2) stats.p(2)])
 
+spatial_effect = predEffectsArray(:,2);
+predictive_effect = predEffectsArray(:,1);
+spatial_weight = predEffectsArray(:,3);
+
+T = table(pid,spatial_effect,predictive_effect);
+writetable(T,'source_data/figure3/source_data_fig3f.csv')  
+
+
+
 subplot(2,2,4)
 scatter(predEffectsArray(:,3),inference_sqError_real_rate,'filled'), lsline
 [r,p] = corrcoef(predEffectsArray(:,3),inference_sqError_real_rate,'rows','complete');
@@ -107,5 +126,8 @@ prepImg
 % Robust fit:
 [b,stats] = robustfit(predEffectsArray(:,3),inference_sqError_real_rate);
 disp([stats.dfe stats.t(2) stats.p(2)])
+
+T = table(pid,spatial_weight,inference_sqError_real_rate);
+writetable(T,'source_data/figure3/source_data_fig3g.csv')  
 
 %% 
