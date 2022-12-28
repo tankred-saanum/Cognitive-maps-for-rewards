@@ -1,8 +1,9 @@
 % Figure 2
-clear all
+clear 
 close all
 
 bdir = '/data/p_02071/choice-maps/Cognitive-maps-for-rewards/';
+addpath([bdir,'figures/helper_scripts'])
 
 startSubj = 101;
 endSubj = 152;
@@ -211,7 +212,7 @@ xlim([0 9])
 
 %%
 inference_all = [nanmean(value_inference(:,1),2) nanmean(value_inference(:,3),2) nanmean(value_inference(:,2),2) nanmean(value_inference(:,4),2)];
-inference_all([1,21,36,37,38],:) = [];
+inference_all(1,:) = [];
 inference_performance = [nanmean(value_inference(:,[1 3]),2) nanmean(value_inference(:,[2 4]),2)];
 w = table(categorical([1 1 2 2].'), categorical([1 2 1 2].'), 'VariableNames', {'object', 'context'}); % within-design
 d = table(inference_all(:,1), inference_all(:,2),inference_all(:,3),inference_all(:,4),'VariableNames', {'c1_o0', 'c1_o1', 'c2_o0', 'c2_o1'});
@@ -232,8 +233,7 @@ set(gcf,'renderer','Painters')
 scatter(arena_true_error,...
     inference_sqError_real_rate,'filled','MarkerEdgeColor',[0 0.5 0.5],...
     'MarkerFaceColor',[0 0.7 0.7], 'MarkerFaceAlpha',.3), lsline
-[r,p] = corr(arena_true_error',...
-    inference_sqError_real_rate,'rows','complete')
+[r,p,rlo,rup] = corrcoef(arena_true_error', inference_sqError_real_rate,'rows','complete')
 
 writematrix([subjList', arena_true_error', inference_sqError_real_rate],'source_data/figure2/source_data_fig2f.csv')
 

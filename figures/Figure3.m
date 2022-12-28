@@ -1,4 +1,4 @@
-%% Experimental script to recreate figure 4
+%% Experimental script to recreate figure 3
 
 clear all
 close all
@@ -14,11 +14,16 @@ addpath(genpath([bdir,'/analysis/helper_scripts']))
 savedir = [bdir,'/behavior/datafiles/merged_data'];
 
 % plot map structure
+removeID = [21,36,37,38]; % individuals to remove due to technical problems during scanning
 startSubj = 101;
+endSubj = 152;
+subjList = startSubj:endSubj;
+subjList(removeID) = []; % removed due to technical issues
+pid = subjList';
+
 load([savedir,'/subj_',num2str(startSubj),'/data_',num2str(startSubj),'.mat']);
 inference_objects = data.mat{3}.data.options.inference_objects;
 
-removeID = [21,36,37,38]; % individuals to remove due to technical problems during scanning
 
 %% Modeled inference
 load([bdir,'/figures/data/population_data.mat']);
@@ -58,6 +63,14 @@ prepImg
 title('Value rating of inference objects')
 ylim([0 100])
 
+T = table(pid,model_inference);
+writetable(T,'source_data/figure3/source_data_fig3c.csv')  
+
+w = table(categorical([1 1 2 2].'), categorical([1 2 1 2].'), 'VariableNames', {'context', 'object'}); % within-design
+d = table(model_inference(:,1), model_inference(:,2),model_inference(:,3),model_inference(:,4),'VariableNames', {'c1_o0', 'c1_o1', 'c2_o0', 'c2_o1'});
+rm = fitrm(d, 'c2_o1-c1_o0 ~ 1', 'WithinDesign', w);
+ranova(rm, 'withinmodel', 'object*context')
+
 %
 real_value = [data.mat{3}.data.settings.value(1,:) data.mat{3}.data.settings.value(2,:)];
 real = repmat(real_value([data.mat{3}.data.options.inference_objects(1,:) data.mat{3}.data.options.inference_objects(2,:)+12]),48,1);
@@ -69,7 +82,7 @@ inference_sqError_real_model = sqrt(sum((rate-model_inference).^2,2)/4);
 
 subplot(2,2,2)
 scatter(inference_sqError_real_model,inference_sqError_real_rate,'filled'), lsline
-[r,p] = corrcoef(inference_sqError_real_model,inference_sqError_real_rate,'rows','complete');
+[r,p,RL,RU] = corrcoef(inference_sqError_real_model,inference_sqError_real_rate,'rows','complete');
 title(sprintf('r = %.2f, p = %.3f',r(1,2),p(1,2)));
 xlabel('Model-predicted inference error')
 ylabel('Inference error');
@@ -80,13 +93,15 @@ kstest(inference_sqError_real_model)
 [b,stats] = robustfit(inference_sqError_real_model,inference_sqError_real_rate);
 disp([stats.dfe stats.t(2) stats.p(2)])
 
+T = table(pid,inference_sqError_real_model,inference_sqError_real_rate);
+writetable(T,'source_data/figure3/source_data_fig3d.csv')  
 
 subplot(2,2,3)
 % load data
 predEffects = readtable(['/data/pt_02071/choice-maps/tankred_modling/final_modeling/effects_and_weights.csv']);
 predEffectsArray = table2array(predEffects(:,2:end));
 scatter(predEffectsArray(:,2),predEffectsArray(:,1),'filled'), lsline
-[r,p] = corrcoef(predEffectsArray(:,2),predEffectsArray(:,1),'rows','complete');
+[r,p,RL,RU] = corrcoef(predEffectsArray(:,2),predEffectsArray(:,1),'rows','complete');
 title(sprintf('r = %.2f, p = %.3f',r(1,2),p(1,2)));
 xlabel('Spatial effect')
 ylabel('Temporal effect');
@@ -96,9 +111,18 @@ prepImg
 [b,stats] = robustfit(predEffectsArray(:,2),predEffectsArray(:,1));
 disp([stats.dfe stats.t(2) stats.p(2)])
 
+spatial_effect = predEffectsArray(:,2);
+predictive_effect = predEffectsArray(:,1);
+spatial_weight = predEffectsArray(:,3);
+
+T = table(pid,spatial_effect,predictive_effect);
+writetable(T,'source_data/figure3/source_data_fig3f.csv')  
+
+
+
 subplot(2,2,4)
 scatter(predEffectsArray(:,3),inference_sqError_real_rate,'filled'), lsline
-[r,p] = corrcoef(predEffectsArray(:,3),inference_sqError_real_rate,'rows','complete');
+[r,p,RL,RU] = corrcoef(predEffectsArray(:,3),inference_sqError_real_rate,'rows','complete');
 title(sprintf('r = %.2f, p = %.3f',r(1,2),p(1,2)));
 xlabel('Spatial weight')
 ylabel('Inference error');
@@ -107,5 +131,8 @@ prepImg
 % Robust fit:
 [b,stats] = robustfit(predEffectsArray(:,3),inference_sqError_real_rate);
 disp([stats.dfe stats.t(2) stats.p(2)])
+
+T = table(pid,spatial_weight,inference_sqError_real_rate);
+writetable(T,'source_data/figure3/source_data_fig3g.csv')  
 
 %% 

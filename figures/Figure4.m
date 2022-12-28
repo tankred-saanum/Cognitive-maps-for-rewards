@@ -5,6 +5,7 @@ close all
 
 % Define baseline directory
 bdir = '/data/p_02071/choice-maps/Cognitive-maps-for-rewards/';
+addpath([bdir,'figures/helper_scripts'])
 
 % Add dependencies
 addpath(genpath([bdir,'/analysis/helper_scripts']))
@@ -17,11 +18,15 @@ con{2} = 'temporal';
 removeID = [21,36,37,38]; % individuals to remove due to technical problems during scanning
 
 session = '3';
-subjIX = 101:152;
-subjIX(removeID) = []; % individuals to remove due to technical problems during scanning
+
+startSubj = 101;
+endSubj = 152;
+subjList = startSubj:endSubj;
+subjList([21,36,37,38]) = []; % removed due to technical issues
+
 
 counter = 0;
-for subj=subjIX
+for subj=subjList
     counter = counter +1;
     pe_spatial(counter) = load(fullfile(bdir,'figures','data','mask',roi,['session_',session],'spatial',sprintf('%d_%s_%s_%s.txt',subj,session,roi,'spatial')));
     pe_temporal(counter) = load(fullfile(bdir,'figures','data','mask',roi,['session_',session],'temporal',sprintf('%d_%s_%s_%s.txt',subj,session,roi,'temporal')));
@@ -51,11 +56,13 @@ figure
 subplot(2,2,1);
 scatter(pe_spatial,spatial_effect,'filled')
 lsline
-[r,p] = corr(pe_spatial', spatial_effect,'rows','complete','type','Pearson');
+[r,p,rlo,rup] = corrcoef(pe_spatial', spatial_effect,'rows','complete')
 title(sprintf('r = %.2f, p = %.3f',r,p));
 xlabel('Spatial fMRI effect')
 ylabel('Spatial effect')
 prepImg
+
+writematrix([subjList', pe_spatial',spatial_effect],'source_data/figure4/source_data_fig4b.csv')
 
 
 % Robust fit:
@@ -65,33 +72,40 @@ disp([stats.dfe stats.t(2) stats.p(2)])
 
 subplot(2,2,2);
 scatter(pe_spatial,inference_error,'filled'), lsline
-[r,p] = corr(pe_spatial', inference_error,'rows','complete','type','Pearson');
+[r,p,rlo,rup] = corrcoef(pe_spatial', inference_error,'rows','complete')
 xlabel('Spatial fMRI effect')
 ylabel('Inference error'),
 title(sprintf('r = %.2f, p = %.3f',r,p))
 prepImg
+writematrix([subjList', pe_spatial',inference_error;],'source_data/figure4/source_data_fig4c.csv')
 
 
 subplot(2,2,3);
 scatter(pe_temporal,temporal_effect,'filled')
 lsline
-[r,p] = corr(pe_temporal', temporal_effect,'rows','complete','type','Spearman');
+[r,p,rlo,rup] = corrcoef(pe_temporal', temporal_effect,'rows','complete');
 title(sprintf('r = %.2f, p = %.3f',r,p));
 ylabel('Temporal effect')
 xlabel('Temporal fMRI effect')
 prepImg
+writematrix([subjList', pe_temporal',temporal_effect],'source_data/figure4/source_data_fig4d.csv')
 
 subplot(2,2,4);
 scatter(pe_temporal,inference_error,'filled'), lsline
-[r,p] = corr(pe_temporal', inference_error,'rows','complete','type','Pearson');
+[r,p,rlo,rup] = corrcoef(pe_temporal', inference_error,'rows','complete')
 ylabel('Inference error'),
 xlabel('Temporal fMRI effect')
 title(sprintf('r = %.2f, p = %.3f',r,p))
 prepImg
+writematrix([subjList', pe_temporal',inference_error],'source_data/figure4/source_data_fig4e.csv')
 
 
 
 %% Mediation analysis
+
+addpath(genpath('/data/p_02071/choice-maps/scripts/CanlabCore'))
+addpath(genpath('/data/p_02071/choice-maps/scripts/mediation_toolbox'))
+writematrix([subjList', pe_spatial',inference_error,spatial_effect],'source_data/figure4/source_data_fig4h.csv')
 [paths, stats] = mediation(pe_spatial', inference_error, spatial_effect, 'boot', 'plots', 'verbose', 'bootsamples', 10000)
 
 
@@ -115,7 +129,6 @@ dSRcorr([21,36,37,38]) = [];
 %%
 %% Test for normality
 lillietest(dSRcorr)
-lillietest(correct)
 lillietest(spatial_effect)
 lillietest(temporal_effect)
 lillietest(inference_error)
@@ -241,3 +254,18 @@ for c = 1:2
     
 end
 prepImg
+
+%% create covariates
+cd '/data/pt_02071/choice-maps/imagingData/2ndLevel/design_529/mask/529_3_06_s8_thr3p3_leftHippoc/session_3/06_weight_update_s8/';
+
+d=dir('*.txt');  % all .txt files in working directory
+N=length(d);     % how many did we find?
+A=zeros(N,1);   % allocate for 24 points of data 1 column/file
+cov = [];
+for k=1:N
+  cov(k,1) = load(d(k).name);
+end
+cd '/data/p_02071/choice-maps/Cognitive-maps-for-rewards/figures'
+T = table(pid,cov);
+writetable(T,'source_data/figure5/source_data_fig5f_cov.csv')  
+
