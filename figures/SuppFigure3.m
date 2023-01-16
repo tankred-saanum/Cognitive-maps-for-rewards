@@ -167,6 +167,11 @@ for ix = 1:size(measure_complete,2)
     ylabel(label{ix})
     hold on 
 
+    w = table(categorical([1 1 2 2].'), categorical([1 2 1 2].'), 'VariableNames', {'session', 'cond'}); % within-design
+    d = table(m(:,1), m(:,2),m(:,3),m(:,4),'VariableNames', {'c1_o0', 'c1_o1', 'c2_o0', 'c2_o1'});
+    rm = fitrm(d, 'c2_o1-c1_o0 ~ 1', 'WithinDesign', w);
+    ranova(rm, 'withinmodel', 'session*cond')
+
     if ix == 2
         ylim([0 1])
     end
@@ -192,7 +197,7 @@ end
 subplot(1,3,3)
 scatter(RMSE, slopes,'filled')
 lsline
-[r,p] = corr(RMSE', slopes, 'rows','complete','type','Spearman');
+[r,p,rlo,rup] = corrcoef(RMSE', slopes, 'rows','complete')
 title(sprintf('r = %.2f, p = %.3f',r,p))
 xlabel('Value rating root mean square error')
 ylabel('Slope')

@@ -1,5 +1,4 @@
-%% Script used for analysing behavioural data of the ChoiceMap taslk
-
+% (c) Mona Garvert, MPI CBS, June 2019
 
 clear all
 close all
@@ -8,7 +7,7 @@ close all
 bdir = '//data/p_02071/choice-maps/Cognitive-maps-for-rewards/';
 
 % Add dependencies
-addpath(genpath([bdir,'/analysis/helper_scripts']))
+addpath(genpath([bdir,'/figures/helper_scripts']))
 
 
 % Analyse population data
@@ -21,139 +20,147 @@ inference_objects = data.mat{3}.data.options.inference_objects;
 
 removeID = [21,36,37,38]; % individuals to remove due to technical problems during scanning
 
-table = [];
+tortuosity  = nan(52,2,2,12);
+error       = nan(52,2,2,12);
+pause       = nan(52,2,2,12);
+rel_pause   = nan(52,2,2,12);
+wayfinding_duration   = nan(52,2,2,12);
+exploration = nan(52,1);
 
-load([bdir,'/figures/data/population_data.mat']);
-stimulus_value = [all_data.real_value(1:12); all_data.real_value(13:24)];
-
-
-subjList = 101:152;
-subjList([21,36,37,38]) = [];
-
-for c = 1:length(subjList)
-    subj = subjList(c);
-
-    disp(['Subject ', num2str(subj)])
-    load([savedir,'/subj_',num2str(subj),'/data_',num2str(subj),'.mat']);
-
-    p_obj = data.mat{2}.data.objPositions; % object location
-    distance = squareform(pdist(p_obj));    % distance between pairs of object
-
-    for session = 1:2
-        trial = [];
-        cr = [];
-        RT = [];
-        probe = [];
-        option1 = [];
-        option2 = [];
-        map = [];
-        dtrial = [];
-        vtrial = [];
-        side = [];
-        valuediff1 = [];
-        valuediff2 = [];
-        distdiff1 = [];
-        distdiff2 = [];
-        distoptions = [];
-
-        % values
-        probevalue   = [];
-        optionvalue1  = [];
-        optionvalue2  = [];
-
-
-        for run = 1:3
-
-            od = data.mat{session+1}.data.scan{run}.RSA.objDiff;
-            choice_too_fast = od.RT < 0.3;
-            od.choicetrial(choice_too_fast) = 0;    % sometimes the choices were made automatically by the button press. ignore these.
-
-            % create csv with all the relevant data
-            trial   = [trial find(od.choicetrial==1)];
-            cr      = [cr; od.cr(od.choicetrial==1)];
-            RT      = [RT; od.RT(od.choicetrial==1)];
-            probe   = [probe; od.stimForChoice(od.choicetrial==1)];
-            option1 = [option1; od.choiceOptions(od.choicetrial==1,1)];
-            option2 = [option2; od.choiceOptions(od.choicetrial==1,2)];
-            map     = [map od.map(od.choicetrial==1)];
-            dtrial  = [dtrial strcmp(od.whichchoice(od.choicetrial==1),'d')];
-            vtrial  = [vtrial strcmp(od.whichchoice(od.choicetrial==1),'v')];
-            side    = [side od.choice(od.choicetrial==1)];
-
-            %od.choice == 1: left key
-            %od.choice == 2: right key;
-
-            for i = 1:length(probe)
-                % distances
-                distdiff1(length(distdiff1)+1) = distance(probe(i),option1(i));
-                distdiff2(length(distdiff2)+1) = distance(probe(i),option2(i));
-                distoptions(length(distoptions)+1) = distance(option1(i),option2(i));
-
-                % values
-                probevalue(length(probevalue)+1)   = stimulus_value(map(i),probe(i));
-                optionvalue1(length(optionvalue1)+1)    = stimulus_value(map(i),option1(i));
-                optionvalue2(length(optionvalue2)+1)    = stimulus_value(map(i),option2(i));
-            end
-            valuediff1 = optionvalue1-probevalue;
-            valuediff2 = optionvalue2-probevalue;
-            valuediffoptions = optionvalue1-optionvalue2;
-
-
-
+prepost = {'pre','post'};
+for subj        = 101:152
+    try
+        disp(subj)
+        
+        load([bdir,'/behavior/datafiles/merged_data/subj_',num2str(subj),'/data_',num2str(subj),'.mat']);
+        
+        % true object location
+        true_position = data.mat{2}.data.objPositions;
+        radius = data.mat{2}.data.radius;
+          
+        load([bdir,'/behavior/datafiles/merged_data/subj_',num2str(subj),'/sub-',num2str(subj),'_exploration_data.mat'])
+        exploration(subj-100) = explorationDuration;
+        
+        run = 0;
+        for session = 2:3
+            for p = 1:2
+                
+                if isfield(eval(['data.viz.session_', num2str(session),'.pre.positionObject']),['run_',num2str(run)])
+                    if ~isempty(eval(['data.viz.session_', num2str(session),'.pre.positionObject.run_',num2str(run)]))
+                        for trial = 0:11
+                            
+                            d = eval(['data.viz.session_',num2str(session),'.',prepost{p},'.positionObject.run_0.trial_',num2str(trial)]);
+                            
+                            expt.pos.session{session}.pre.positioning(d.stim+1,:) = d.position(end,[1,3]);%/(data.viz.radius*2);
+                            
+                            % Distance between start and end point
+                            C = pdist([[d.position(1,1),d.position(1,3)];[d.position(end,1),d.position(end,3)]],'Euclidean');
+                            
+                            % cumulative length
+                            L=0;
+                            for i = 1:length(d.position)-1
+                                L = L + pdist([[d.position(i,1),d.position(i,3)];[d.position(i+1,1),d.position(i+1,3)]],'Euclidean');
+                            end
+                            wayfinding_duration(subj-100,session-1,p,d.stim+1) = length(d.position);
+                            
+                            final_position = [d.position(end,1),d.position(end,3)];
+                            error(subj-100,session-1,p,d.stim+1) = pdist([final_position;[true_position(d.stim+1,1)*radius,true_position(d.stim+1,3)*radius']]);
+                            
+                            pause(subj-100,session-1,p,d.stim+1) = sum(diff(d.position(:,1))==0 & diff(d.position(:,3))==0);
+                            rel_pause(subj-100,session-1,p,d.stim+1) = sum(diff(d.position(:,1))==0 & diff(d.position(:,3))==0)/length(d.position);
+                            
+                            tortuosity(subj-100,session-1,p,d.stim+1) = L/C;
+                            
+                        end
+                    end
+                end
+            end            
         end
-
-
-
-        % regression for distance trials
-        ix = dtrial==1;
-        dm = zscore([ones(sum(ix),1)  distdiff1(ix)' distdiff2(ix)' abs(valuediff1(ix))' abs(valuediff2(ix))' optionvalue1(ix)' optionvalue2(ix)']);
-
-        cr_ols(1,c,session, :) = ols(cr(ix), dm, eye(size(dm,2)));
-        RT_ols(1,c,session, :) = ols(RT(ix), dm, eye(size(dm,2)));
-        %             side_ols(1,c,session, :) = ols(side(ix)', dm, eye(size(dm,2)));
-        [B(1,c,session, :),dev,stats] = mnrfit(dm(:,2:end),(side(ix))');
-
-        % regression for value trials
-        if session == 2
-            ix = vtrial==1;
-            dm = [ones(sum(ix),1) zscore([ distdiff1(ix)' distdiff2(ix)' abs(valuediff1(ix))' abs(valuediff2(ix))' optionvalue1(ix)' optionvalue2(ix)'])];
-
-            cr_ols(2,c,session, :) = ols(cr(ix), dm, eye(size(dm,2)));
-            RT_ols(2,c,session, :) = ols(RT(ix), dm, eye(size(dm,2)));
-            %                 side_ols(2,c,session, :) = ols(side(ix)', dm, eye(size(dm,2)));
-            %
-            [B(2,c,session, :),dev,stats] = mnrfit(dm(:,2:end),(side(ix))');
-
-        end
+    catch
     end
 end
+
+error(removeID,:,:,:)      = [];
+tortuosity(removeID,:,:,:) = [];
+pause(removeID,:,:,:)      = [];
+rel_pause(removeID,:,:,:)  = [];
+wayfinding_duration(removeID,:,:,:)  = [];
+exploration(removeID)      = [];
+
+error(10,:,:,:) = nan;
+
+measure{1} = exploration;
+measure{2} = nanmean(nanmean(nanmean(error(:,:,:,:),4),3),2);
+measure{3} = nanmean(nanmean(nanmean(wayfinding_duration(:,:,:,:),4),3),2);
+measure{4} = nanmean(nanmean(nanmean(rel_pause(:,:,:,:),4),3),2);
+measure{5} = nanmean(nanmean(nanmean(tortuosity(:,:,:,:),4),3),2);
+
+
+[xpc, rpc] = pca([measure{1} measure{2} measure{3} measure{4} measure{5}]);
+label{1} = 'Exploration duration';
+label{2} = 'Replacement error';
+label{3} = 'Wayfinding duration';
+label{4} = 'Pausing';
+label{5} = 'Tortuosity';
+
+[m,p] = corr([measure{1} measure{2} measure{3} measure{4} measure{5}]);
+
 
 
 %%
-side_ols=B;
-plotix = [1:6 8:13]*2-1;
-figure('Renderer', 'painters', 'Position', [10 10 1200 400])
-for session = 1:2
-    hold on
 
-    % Diffculty
-    cr_plot = squeeze(nanmean(cr_ols(:,:,session,2:end),2))'; cr_std = squeeze(nanstd(cr_ols(:,:,session,2:end),0,2))'/sqrt(48);
-    RT_plot = squeeze(nanmean(RT_ols(:,:,session,2:end),2))'; RT_std = squeeze(nanstd(RT_ols(:,:,session,2:end),0,2))'/sqrt(48);
-    side_plot = squeeze(nanmean(side_ols(:,:,session,2:end),2))'; side_std = squeeze(nanstd(side_ols(:,:,session,2:end),0,2))'/sqrt(48);
-    
-    % %
-    individual_data = [squeeze(side_ols(1,:,session,2:end)) squeeze(side_ols(2,:,session,2:end))];
-    subplot(1,2,session)
-    [h,p,x,stats] = ttest([squeeze(side_ols(1,:,session,2:end)) squeeze(side_ols(2,:,session,2:end))]);
-    boxplot([squeeze(side_ols(1,:,session,2:end)) squeeze(side_ols(2,:,session,2:end))],'positions',plotix,'colorgroup',h==1, 'colors',[0.5 0.5 0.5;0.8 0 0]);
-    prepImg
-    ylabel('Parameter estimate')
-
-    hold on
-    for i = 1:12
-        scatter(repmat(plotix(i)+0.5,1,48),(individual_data(:,i)),'k')
+counter = 0;
+figure('Renderer', 'painters', 'Position', [10 10 1200 1200])
+for i = 1:size(measure,2)
+    for j = 1:size(measure,2)
+        counter = counter+1;
+        if i > j
+            subplot(size(measure,2),size(measure,2),counter)
+            
+            scatter(measure{i}, measure{j},'filled'), lsline
+            [r,p] = corrcoef(measure{i}, measure{j},'rows','complete');
+            title(sprintf('r = %.2f, p = %.3f',r(1,2),p(1,2)))
+            xlabel(label{i})
+            ylabel(label{j})
+            prepImg
+        end
     end
-
-
 end
 
+
+%% Load imaging data
+
+% load imaging data
+roi = '781_3_03_s8_thr3p3_rightHC';
+con{1} = 'spatial';
+con{2} = 'temporal';
+
+session = '3';
+subjIX = 101:152;
+subjIX(removeID) = []; % individuals to remove due to technical problems during scanning
+
+counter = 0;
+for subj=subjIX
+    counter = counter +1;
+    pe_spatial(counter) = load(fullfile(bdir,'figures','masks',roi,['session_',session],'03_allDistance_s8',sprintf('%d_%s_%s_%s.txt',subj,session,roi,'03_allDistance_s8')));
+    pe_temporal(counter) = load(fullfile(bdir,'figures','masks',roi,['session_',session],'04_SRDistance_s8',sprintf('%d_%s_%s_%s.txt',subj,session,roi,'04_SRDistance_s8')));
+end
+
+%%
+figure; 
+subplot(1,2,1)
+i = 2;
+scatter(measure{i}, pe_spatial,'k','filled'), lsline
+[r,p] = corrcoef(measure{i}, pe_spatial,'rows','complete');
+title(sprintf('r = %.2f, p = %.3f',r(1,2),p(1,2)))
+xlabel(label{i})
+ylabel('Spatial fMRI effect')
+prepImg
+subplot(1,2,2)
+scatter(measure{i}, pe_temporal,'k','filled'), lsline
+[r,p] = corrcoef(measure{i}, pe_temporal,'rows','complete');
+title(sprintf('r = %.2f, p = %.3f',r(1,2),p(1,2)))
+xlabel(label{i})
+ylabel('Ppredictive fMRI effect')
+
+prepImg
