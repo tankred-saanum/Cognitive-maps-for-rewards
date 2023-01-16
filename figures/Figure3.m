@@ -1,4 +1,4 @@
-%% Experimental script to recreate figure 4
+%% Experimental script to recreate figure 3
 
 clear all
 close all
@@ -66,6 +66,14 @@ ylim([0 100])
 T = table(pid,model_inference);
 writetable(T,'source_data/figure3/source_data_fig3c.csv')  
 
+<<<<<<< HEAD
+=======
+w = table(categorical([1 1 2 2].'), categorical([1 2 1 2].'), 'VariableNames', {'context', 'object'}); % within-design
+d = table(model_inference(:,1), model_inference(:,2),model_inference(:,3),model_inference(:,4),'VariableNames', {'c1_o0', 'c1_o1', 'c2_o0', 'c2_o1'});
+rm = fitrm(d, 'c2_o1-c1_o0 ~ 1', 'WithinDesign', w);
+ranova(rm, 'withinmodel', 'object*context')
+
+>>>>>>> 71ec57fbd4141d3afce91b23a031084a151806da
 %
 real_value = [data.mat{3}.data.settings.value(1,:) data.mat{3}.data.settings.value(2,:)];
 real = repmat(real_value([data.mat{3}.data.options.inference_objects(1,:) data.mat{3}.data.options.inference_objects(2,:)+12]),48,1);
@@ -77,7 +85,7 @@ inference_sqError_real_model = sqrt(sum((rate-model_inference).^2,2)/4);
 
 subplot(2,2,2)
 scatter(inference_sqError_real_model,inference_sqError_real_rate,'filled'), lsline
-[r,p] = corrcoef(inference_sqError_real_model,inference_sqError_real_rate,'rows','complete');
+[r,p,RL,RU] = corrcoef(inference_sqError_real_model,inference_sqError_real_rate,'rows','complete');
 title(sprintf('r = %.2f, p = %.3f',r(1,2),p(1,2)));
 xlabel('Model-predicted inference error')
 ylabel('Inference error');
@@ -96,7 +104,7 @@ subplot(2,2,3)
 predEffects = readtable(['/data/pt_02071/choice-maps/tankred_modling/final_modeling/effects_and_weights.csv']);
 predEffectsArray = table2array(predEffects(:,2:end));
 scatter(predEffectsArray(:,2),predEffectsArray(:,1),'filled'), lsline
-[r,p] = corrcoef(predEffectsArray(:,2),predEffectsArray(:,1),'rows','complete');
+[r,p,RL,RU] = corrcoef(predEffectsArray(:,2),predEffectsArray(:,1),'rows','complete');
 title(sprintf('r = %.2f, p = %.3f',r(1,2),p(1,2)));
 xlabel('Spatial effect')
 ylabel('Temporal effect');
@@ -117,7 +125,7 @@ writetable(T,'source_data/figure3/source_data_fig3f.csv')
 
 subplot(2,2,4)
 scatter(predEffectsArray(:,3),inference_sqError_real_rate,'filled'), lsline
-[r,p] = corrcoef(predEffectsArray(:,3),inference_sqError_real_rate,'rows','complete');
+[r,p,RL,RU] = corrcoef(predEffectsArray(:,3),inference_sqError_real_rate,'rows','complete');
 title(sprintf('r = %.2f, p = %.3f',r(1,2),p(1,2)));
 xlabel('Spatial weight')
 ylabel('Inference error');

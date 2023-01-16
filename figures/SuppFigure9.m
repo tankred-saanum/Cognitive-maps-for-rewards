@@ -1,10 +1,8 @@
-% Addresses reviewer comment 1.3
-
 clear all
 close all
 
 % Define baseline directory
-bdir = '//data/p_02071/choice-maps/Cognitive-maps-for-rewards/';
+bdir = '/data/p_02071/choice-maps/Cognitive-maps-for-rewards/';
 
 % Add dependencies
 addpath(genpath([bdir,'/figures/helper_scripts']))
@@ -82,7 +80,7 @@ end
 
 subplot(1,3,2)
 scatter(vifS(:,2,:),pe_spatial,'filled'), lsline
-[r,p] = corr(vifS(:,2,:),pe_spatial','type','Pearson');
+[r,p,RL,RU] = corrcoef(vifS(:,2,:),pe_spatial');
 xlabel('VIF')
 ylabel('Spatial fMRI effect')
 title(sprintf('r = %.2f, p = %.2f',r,p));
@@ -91,7 +89,7 @@ prepImg
 
 subplot(1,3,3); 
 scatter(vifS(:,2,:),pe_temporal,'filled'), lsline
-[r,p] = corr(vifS(:,2,:),pe_temporal','type','Pearson');
+[r,p,RL,RU] = corrcoef(vifS(:,2,:),pe_temporal')
 xlabel('VIF')
 ylabel('Temporal fMRI effect')
 title(sprintf('r = %.2f, p = %.2f',r,p));
