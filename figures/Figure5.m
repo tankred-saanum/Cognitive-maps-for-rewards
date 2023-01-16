@@ -147,9 +147,5 @@ disp([stats.dfe stats.t(2) stats.p(2)])
 T = table(pid,pe_OFC_hcWeight_cov,pe_spatial_hcWeight_cov,pe_hcWeight);
 writetable(T,'source_data/figure5/source_data_fig5i.csv')  
 
-<<<<<<< HEAD
-[paths, stats] = mediation(-pe_OFC_hcWeight_cov,pe_spatial_hcWeight_cov, pe_hcWeight, 'boot', 'plots', 'verbose', 'bootsamples', 10000);
-=======
 [paths, stats] = mediation(pe_OFC_hcWeight_cov,pe_spatial_hcWeight_cov, pe_hcWeight, 'boot', 'plots', 'verbose', 'bootsamples', 10000);
->>>>>>> 71ec57fbd4141d3afce91b23a031084a151806da
 

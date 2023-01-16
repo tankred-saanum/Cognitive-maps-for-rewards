@@ -66,14 +66,10 @@ ylim([0 100])
 T = table(pid,model_inference);
 writetable(T,'source_data/figure3/source_data_fig3c.csv')  
 
-<<<<<<< HEAD
-=======
 w = table(categorical([1 1 2 2].'), categorical([1 2 1 2].'), 'VariableNames', {'context', 'object'}); % within-design
 d = table(model_inference(:,1), model_inference(:,2),model_inference(:,3),model_inference(:,4),'VariableNames', {'c1_o0', 'c1_o1', 'c2_o0', 'c2_o1'});
 rm = fitrm(d, 'c2_o1-c1_o0 ~ 1', 'WithinDesign', w);
 ranova(rm, 'withinmodel', 'object*context')
-
->>>>>>> 71ec57fbd4141d3afce91b23a031084a151806da
 %
 real_value = [data.mat{3}.data.settings.value(1,:) data.mat{3}.data.settings.value(2,:)];
 real = repmat(real_value([data.mat{3}.data.options.inference_objects(1,:) data.mat{3}.data.options.inference_objects(2,:)+12]),48,1);
